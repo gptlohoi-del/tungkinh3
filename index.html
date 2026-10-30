@@ -644,13 +644,17 @@
 
         <section class="practice-panel" id="practicePanel" aria-labelledby="practiceTitle">
             <h3 id="practiceTitle">🎙️ Luyện đọc từng câu</h3>
-            <p class="practice-help">Chạm <b>🎙 Luyện</b> bên cạnh câu phía dưới, hoặc bấm REC để luyện câu đầu tiên. Kết thúc REC sẽ tự nghe lại giọng mình có khoảng nghỉ.</p>
+            <p class="practice-help">Dùng <b>◀ Câu trước / Câu tiếp ▶</b> để chuyển câu ngay tại đây, hoặc chạm <b>🎙 Luyện</b> trong danh sách. Kết thúc REC sẽ tự nghe lặp giọng mình có khoảng nghỉ.</p>
             <div class="practice-target" aria-live="polite">
                 <div class="practice-target-number" id="practiceTargetNumber">Chưa chọn câu</div>
                 <div class="practice-target-eng" id="practiceTargetEng">Hãy chọn một câu để luyện đọc.</div>
                 <div class="practice-target-ipa" id="practiceTargetIpa"></div>
                 <div class="practice-target-vn" id="practiceTargetVn"></div>
             </div>
+            <nav class="practice-navigation" aria-label="Điều hướng câu luyện đọc">
+                <button type="button" id="practicePrevBtn" disabled aria-label="Chuyển đến câu trước">◀ Câu trước</button>
+                <button type="button" id="practiceNextBtn" disabled aria-label="Chuyển đến câu tiếp theo">Câu tiếp ▶</button>
+            </nav>
             <div class="practice-actions">
                 <button type="button" class="practice-sample" id="practiceSampleBtn" disabled aria-label="Nghe câu mẫu một lần">🔊 Nghe mẫu</button>
                 <button type="button" class="practice-rec" id="practiceRecBtn" disabled aria-label="Bắt đầu ghi âm">🎙 REC</button>

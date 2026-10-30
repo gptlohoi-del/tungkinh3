@@ -7,6 +7,11 @@
 .practice-target-eng { font-weight: 700; font-size: 1.1rem; line-height: 1.5; overflow-wrap: anywhere; }
 .practice-target-ipa { color: #1161ba; margin-top: 5px; line-height: 1.45; overflow-wrap: anywhere; }
 .practice-target-vn { color: #52606d; margin-top: 4px; line-height: 1.45; }
+.practice-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 0 0 12px; }
+.practice-navigation button { width: 100%; min-height: 50px; min-width: 0; border: 2px solid #1567a8; border-radius: 10px; padding: 10px 6px; background: #ffffff; color: #145f9e; font-size: 1rem; font-weight: 750; touch-action: manipulation; }
+.practice-navigation button:last-child { background: #146aa5; color: white; }
+.practice-navigation button:disabled { background: #e7edf2; border-color: #cbd5df; color: #667786; opacity: .65; cursor: not-allowed; }
+.practice-navigation button:focus-visible { outline: 3px solid #e0aa3a; outline-offset: 2px; }
 .practice-actions { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
 .practice-actions button { min-width: 0; width: 100%; border: 0; border-radius: 10px; color: #fff; font-size: .95rem; font-weight: bold; min-height: 55px; padding: 9px 4px; line-height: 1.3; touch-action: manipulation; }
 .practice-actions button:disabled, .practice-bottom-actions button:disabled { opacity: .48; cursor: not-allowed; }

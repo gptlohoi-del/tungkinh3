@@ -252,6 +252,10 @@
             $('practiceTargetEng').textContent = s?.text || 'Hãy chọn một câu để luyện đọc.';
             $('practiceTargetIpa').textContent = s?.ipa ? '/' + s.ipa + '/' : '';
             $('practiceTargetVn').textContent = s?.vnText || '';
+            // Buttons remain next to the active sentence (important on long 86+ sentence lessons).
+            // Disable them while recording so navigation cannot discard an unfinished take.
+            $('practicePrevBtn').disabled = !s || this.index === 0 || this.recState !== 'idle';
+            $('practiceNextBtn').disabled = !s || this.index >= sentences.length - 1 || this.recState !== 'idle';
             $('practiceRecBtn').disabled = !s || this.recState === 'starting' || this.recState === 'stopping';
             $('practiceRecBtn').classList.toggle('recording', this.recState === 'recording');
             $('practiceRecBtn').textContent = this.recState === 'recording' ? '⏹ Kết thúc REC' : '🎙 REC';
@@ -548,6 +552,12 @@
         async init() {
             this.selfAudio = $('practiceSelfAudio');
             loadSettings();
+            $('practicePrevBtn').addEventListener('click', () => {
+                if (this.index > 0) void this.select(this.index - 1, { scroll: false });
+            });
+            $('practiceNextBtn').addEventListener('click', () => {
+                if (this.index >= 0 && this.index < sentences.length - 1) void this.select(this.index + 1, { scroll: false });
+            });
             $('practiceSampleBtn').addEventListener('click', () => this.playSampleOnce());
             $('practiceRecBtn').addEventListener('click', () => this.toggleRecord());
             $('practiceCompareBtn').addEventListener('click', () => this.startCompare());

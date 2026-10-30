@@ -12,7 +12,7 @@
 
 ## 2. Tính năng mới: luyện đọc và so sánh
 
-1. Vào **🎙️ Luyện đọc từng câu**, hoặc nhấn **🎙 Luyện** tại đúng câu trong danh sách. Nút chọn câu để luyện **không thay đổi chức năng đánh dấu checkbox** của chế độ lặp nhiều câu. Khi mở bài mới, câu đầu tiên được chọn sẵn.
+1. Vào **🎙️ Luyện đọc từng câu**. Dùng **◀ Câu trước** hoặc **Câu tiếp ▶** ngay dưới khung câu để chuyển nhanh mà **không cần cuộn xuống danh sách**. Nút Câu trước bị khóa ở câu đầu; Câu tiếp bị khóa ở câu cuối. Khi đang REC, phải kết thúc ghi âm trước khi chuyển câu. Có thể nhấn **🎙 Luyện** tại bất kỳ câu nào trong danh sách để nhảy trực tiếp tới câu đó (không thay đổi checkbox của chế độ lặp nhiều câu). Khi mở bài mới, câu đầu tiên được chọn sẵn.
 2. Nhấn **🎙 REC**, cho phép microphone (lần đầu), đọc câu, rồi nhấn **⏹ Kết thúc REC**.
 3. **Ngay khi bản thu hoàn thành**, bản ghi mở trong trình phát và **tự phát lặp lại** với khoảng nghỉ. Việc lưu xuống bộ nhớ chạy sau khi bắt đầu phát, tránh chờ ghi file. Trình duyệt có thể chặn tự phát trong một số tình huống: nhấn nút Play trên bản ghi nếu có thông báo.
 4. Nhấn **🔊 Nghe mẫu** để nghe một lần đúng đoạn MP3 được xác định bằng mốc thời gian của SRT (có khoảng đệm tùy chỉnh).
@@ -96,6 +96,7 @@ tungkinh3/
 
 - [ ] Mở từ Chrome Android bằng HTTPS; cấp quyền microphone.
 - [ ] Nghe bài MP3 cũ, dùng tốc độ, A–B, chọn nhóm câu và lặp như trước.
+- [ ] Bấm Câu tiếp / Câu trước, kiểm tra số câu, nội dung và lịch sử bản ghi đổi đúng; nút không cho vượt câu đầu/cuối.
 - [ ] Chọn câu, REC → dừng REC → bản ghi tự phát lặp với khoảng nghỉ; nhấn Dừng.
 - [ ] Nghe mẫu 1 lần và so sánh mẫu/giọng mình theo chu kỳ.
 - [ ] Đổi câu và bài khi đang phát, kiểm tra không có âm thanh chồng nhau.
