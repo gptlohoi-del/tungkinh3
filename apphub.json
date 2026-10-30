@@ -1,0 +1,8 @@
+{
+  "id": "tungkinh3",
+  "name": "Tụng Kinh 3",
+  "version": "1.1.0",
+  "description": "Luyện đọc từng câu, lặp A–B và lặp danh sách câu; dùng chung âm thanh với KinhTest2.",
+  "entry": "index.html",
+  "icon": "📖"
+}

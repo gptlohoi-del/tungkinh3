@@ -1,110 +1,78 @@
-# tungkinh3 — Luyện nghe và luyện đọc từng câu
+# Tụng Kinh 3 — bản tiết kiệm dung lượng cho App Hub (1.1)
 
-Ứng dụng web/PWA **ưu tiên Android (Chrome)**, phát triển từ bản gốc `kinhtest2-main`. Chạy bằng HTML/CSS/JavaScript tĩnh và **không cần tài khoản, máy chủ ghi âm hay dịch vụ bên ngoài**. Phù hợp triển khai miễn phí qua GitHub Pages.
+Bản này giữ chức năng **luyện đọc từng câu, ghi âm/so sánh, lặp đoạn A–B và lặp danh sách câu**, nhưng chia giao diện thành ba tab. Có ô **Đến câu số**: nhập số câu (bắt đầu từ 1) rồi nhấn **Đi đến** hoặc Enter; khi REC chưa kết thúc, không cho chuyển câu/chức năng để tránh mất bản ghi. Chức năng vừa chọn được nhớ lại ở lần mở sau.
 
-## 1. Các tính năng giữ nguyên từ bản gốc
+## 1. Loại bỏ dữ liệu trùng với KinhTest2
 
-- Nạp và ghép các cặp MP3 + SRT/TXT (cùng tên), hiển thị tiếng Anh, tiếng Việt nếu có và IPA từ `IPA.txt`.
-- Trình phát MP3 với các mức tốc độ từ **0.5x đến 1.5x**; tải MP3.
-- Đồng bộ và tô sáng câu đang đọc; lặp đoạn A–B; lặp một hay nhiều câu đã chọn; chọn nhanh theo số/khoảng câu.
-- Cài đặt kích thước chữ lưu trong `localStorage`.
-- Nạp thư mục từ PC và kéo thả tệp; service worker để dùng offline với tài nguyên đã lưu.
+Đã so sánh SHA-256 với ZIP KinhTest2 do người dùng cung cấp: **4 tệp giống hệt nhau** (MP3 và SRT bài 01, bài 02), tổng **29.171.339 byte (~27,82 MiB)**. Bốn tệp đó được **loại khỏi repo Tụng Kinh 3**, tránh đóng gói/tải trùng. Riêng MP3 + SRT bài **03 ADDITIONAL PRAYER** và `IPA.txt` của Tụng Kinh 3 được giữ nguyên; hai tệp IPA của hai app không giống nhau.
 
-## 2. Tính năng mới: luyện đọc và so sánh
+`tracks.json` chứa **3 bài**, mỗi bài có các cặp nguồn MP3/SRT:
 
-1. Vào **🎙️ Luyện đọc từng câu**. Dùng **◀ Câu trước** hoặc **Câu tiếp ▶** ngay dưới khung câu để chuyển nhanh mà **không cần cuộn xuống danh sách**. Nút Câu trước bị khóa ở câu đầu; Câu tiếp bị khóa ở câu cuối. Khi đang REC, phải kết thúc ghi âm trước khi chuyển câu. Có thể nhấn **🎙 Luyện** tại bất kỳ câu nào trong danh sách để nhảy trực tiếp tới câu đó (không thay đổi checkbox của chế độ lặp nhiều câu). Khi mở bài mới, câu đầu tiên được chọn sẵn.
-2. Nhấn **🎙 REC**, cho phép microphone (lần đầu), đọc câu, rồi nhấn **⏹ Kết thúc REC**.
-3. **Ngay khi bản thu hoàn thành**, bản ghi mở trong trình phát và **tự phát lặp lại** với khoảng nghỉ. Việc lưu xuống bộ nhớ chạy sau khi bắt đầu phát, tránh chờ ghi file. Trình duyệt có thể chặn tự phát trong một số tình huống: nhấn nút Play trên bản ghi nếu có thông báo.
-4. Nhấn **🔊 Nghe mẫu** để nghe một lần đúng đoạn MP3 được xác định bằng mốc thời gian của SRT (có khoảng đệm tùy chỉnh).
-5. Nhấn **🔁 So sánh** để nghe *mẫu → nghỉ → bản ghi → nghỉ → mẫu…*; **⏹ Dừng phát** để dừng vòng lặp. Nhấn REC mới sẽ tự dừng phát cũ.
-6. Nút **▶ Nghe lại giọng mình** dùng để quay lại chế độ chỉ nghe bản ghi. Trình phát bản ghi có thanh tua và Play riêng.
+- Bài 01: `../kinhtest2/01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.*` (theo tên thực tế xuất hiện trong ZIP KinhTest2); dự phòng tên chuẩn Unicode `01 Kinh nhạc CHÁNH TINH TẤN eng.*` nếu GitHub/App Hub dùng tên ấy.
+- Bài 02: `../kinhtest2/02 Kinh doc CHANH TINH TAN eng.*`.
+- Bài 03: `./03 ADDITIONAL PRAYER.*` của Tụng Kinh 3.
 
-Trong Settings (nút hoa sen góc màn hình → tab **⚙️ Setting**), có thể thay đổi: khoảng nghỉ khi nghe giọng mình (0–10 giây, mặc định 2 giây); khoảng nghỉ giữa mẫu và bản ghi (0–10 giây, mặc định 1.5 giây); lặp vô hạn/5/10 lần; đệm MP3 (0–1 giây, mặc định 0.1); bật/tắt tự phát khi kết thúc REC.
+Ứng dụng thử đọc phụ đề trước và chọn cặp đường dẫn tương ứng; cả tên chứa `#` lẫn tiếng Việt đều được mã hóa đúng khi mở URL. Nếu không tìm được file sẽ báo rõ trên giao diện, **không tự động tải về/nhân đôi dữ liệu từ Internet**.
 
-## 3. Lưu bản ghi — thiết kế cho Android
-
-Trong **Settings → Lưu bản ghi** có **ba chế độ**:
-
-- **Không lưu**: chỉ giữ bản vừa thu trong phiên hiện tại; có thể xuất bản đó qua **⬇ Lưu bản ghi hiện tại**.
-- **Lưu bản gần nhất** *(mặc định)*: mỗi câu/bài lưu một bản gần nhất trong **IndexedDB** trên thiết bị.
-- **Lưu nhiều lần**: mỗi lượt thu là một bản độc lập; có thể nghe, xuất, xóa từ mục *Bản ghi đã lưu của câu này*.
-
-Với hai chế độ có lưu, chọn nơi lưu:
-
-- **Bộ nhớ ứng dụng** *(mặc định, khuyến nghị)*: lưu bằng IndexedDB, không cần chọn lại chỗ lưu khi REC. Dữ liệu vẫn ở máy, **không upload ghi âm lên GitHub**.
-- **Thư mục tôi chọn** *(tùy khả năng trình duyệt)*: người dùng nhấn **📂 Chọn thư mục lưu** để cấp quyền. Ứng dụng vẫn lưu **bản sao trong IndexedDB** và cố gắng ghi thêm file vào thư mục nếu quyền còn hiệu lực. Quyền có thể bị thu hồi khi đóng tab/ứng dụng; nếu không thể tự ghi, thông báo hiển thị trong ứng dụng và bản lưu tại IndexedDB vẫn giữ nguyên.
-
-**Android / Chrome:** quyền truy cập thư mục trực tiếp không phải lúc nào cũng được hỗ trợ. Khi đó sử dụng nút **⬇ Lưu bản ghi hiện tại** (lưu/chia sẻ theo trình duyệt) hoặc **📦 Xuất tất cả (.zip)** để lưu về *Downloads* và quản lý bằng ứng dụng *Files / Tệp* trên điện thoại. Không thể cam kết web app chọn được bất kỳ thư mục nào trên mọi điện thoại.
-
-⚠️ **IndexedDB có thể bị xóa nếu dọn dữ liệu trình duyệt, xóa ứng dụng PWA, hết dung lượng hoặc cơ chế thu hồi lưu trữ của hệ điều hành.** Hãy xuất ZIP định kỳ. Khi chọn “Lưu bản gần nhất”, những bản cũ cho câu đó sẽ bị thay thế trong IndexedDB; các file đã xuất ra ngoài không được tự động xóa.
-
-Bản ghi được lưu theo định dạng do trình duyệt hỗ trợ (thường là **WebM/Opus** trên Chrome Android); đây **không phải MP3**. Tên file xuất có thông tin bài, số câu, thời điểm ghi.
-
-## 4. Chạy và triển khai
-
-### GitHub Pages
-
-1. Tạo repository tên **`tungkinh3`** trong tài khoản GitHub của bạn.
-2. Giải nén toàn bộ nội dung ZIP vào **thư mục gốc** của repository (bao gồm `index.html`, `practice.js`, `practice.css`, `manifest.json`, `sw.js`, `tracks.json`, MP3/SRT và `IPA.txt`).
-3. Vào **Settings → Pages → Build and deployment → Deploy from a branch**, chọn `main` / `(root)` và lưu.
-4. Mở `https://<ten-github>.github.io/tungkinh3/` trên Chrome Android. Nếu muốn, chọn **Add to Home screen / Thêm vào màn hình chính**.
-5. Cho phép microphone khi REC lần đầu. HTTPS là bắt buộc khi ghi âm từ trình duyệt (ngoại trừ localhost).
-
-### Kiểm tra trên PC (localhost)
-
-```bash
-cd tungkinh3
-python -m http.server 8000
-# Truy cập http://localhost:8000/
-```
-
-Không nên mở `index.html` trực tiếp bằng `file://` để kiểm tra REC và tải dữ liệu. Đường dẫn `localhost` được coi là ngữ cảnh an toàn cho microphone trên máy đang chạy server; trên **điện thoại khác**, hãy sử dụng HTTPS như GitHub Pages.
-
-## 5. Thêm hoặc thay đổi bài đọc
-
-- Đưa các cặp `TenBai.mp3` và `TenBai.srt` (hoặc `.txt` có cấu trúc thời gian giống SRT) **cùng tên gốc** vào repository. SRT được đánh số 0 hay 1 đều được.
-- Nội dung câu có thể là `English | Tiếng Việt` hoặc chỉ có `English`.
-- GitHub Pages: chương trình quét file qua GitHub API và có **`tracks.json` dự phòng** khi offline/không gọi được API. Khi thêm bài mới, cập nhật `tracks.json` thành danh sách tên file MP3/SRT (mảng JSON) để bảo đảm khả năng dự phòng; nếu dùng API online thì không bắt buộc cập nhật ngay.
-- Audio + SRT có trong repo gốc được giữ nguyên. Cột thời gian của SRT quyết định phần MP3 được phát khi nghe mẫu.
-
-## 6. Offline, quyền truy cập và giới hạn
-
-- Service worker cache mã nguồn, giao diện và SRT/IPA. File MP3 tải và cache khi mở; hãy **mở bài lúc online ít nhất một lần** trước khi dùng offline. Dữ liệu ghi âm nằm riêng trong IndexedDB, không đưa vào cache của service worker.
-- Chrome/Android có thể khóa màn hình, dừng phát nền, thu hồi quyền microphone hoặc tắt trang khi thiếu tài nguyên. Phát lặp được thiết kế cho lúc ứng dụng đang mở.
-- Không tự ghi ra thư mục nếu trình duyệt không hỗ trợ API hoặc chưa được cấp quyền; dùng Xuất file/ZIP trong trường hợp đó.
-- Sau khi đổi chế độ lưu, bản ghi cũ trong IndexedDB **không tự bị xóa**. Xóa thủ công bằng nút xóa tại lịch sử bản ghi.
-- Một câu chỉ ghi một bản tại một thời điểm, không ghi khi phát âm thanh mẫu để tránh tiếng vang.
-- Các bản ghi không được đưa lên mạng; trừ trường hợp người dùng tự chia sẻ/xuất file ra ngoài.
-
-## 7. Cấu trúc dự án
+**Yêu cầu bắt buộc:** Trong gói App Hub, hai thư mục cần nằm **cùng cấp**:
 
 ```text
-tungkinh3/
-├── index.html          # Giao diện và chức năng gốc + điểm gắn luyện đọc
-├── practice.js         # REC / playback / IndexedDB / ZIP / truy cập thư mục
-├── practice.css        # Giao diện luyện đọc phù hợp màn hình cảm ứng
-├── sw.js               # Cache offline
-├── manifest.json       # Cài đặt PWA
-├── tracks.json         # Danh sách MP3/SRT để dự phòng khi không quét được
-├── IPA.txt             # Dữ liệu IPA gốc
-├── icon-192.png / icon-512.png
-├── *.mp3 / *.srt       # Audio và phụ đề bản gốc
-└── README.md
+public/modules/
+  kinhtest2/
+    index.html
+    01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.mp3
+    01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.srt
+    02 Kinh doc CHANH TINH TAN eng.mp3
+    02 Kinh doc CHANH TINH TAN eng.srt
+    ...
+  tungkinh3/
+    index.html
+    practice.js / practice.css / tracks.json
+    03 ADDITIONAL PRAYER.mp3
+    03 ADDITIONAL PRAYER.srt
+    IPA.txt
+    ...
 ```
 
-## 8. Checklist kiểm thử thực tế trên Android
+Nếu KinhTest2 đang dùng tên Unicode thay cho dạng `#U...`, mã cũng có đường dẫn dự phòng. Không đổi tên tệp trong KinhTest2 nếu chưa cập nhật `tracks.json`.
 
-- [ ] Mở từ Chrome Android bằng HTTPS; cấp quyền microphone.
-- [ ] Nghe bài MP3 cũ, dùng tốc độ, A–B, chọn nhóm câu và lặp như trước.
-- [ ] Bấm Câu tiếp / Câu trước, kiểm tra số câu, nội dung và lịch sử bản ghi đổi đúng; nút không cho vượt câu đầu/cuối.
-- [ ] Chọn câu, REC → dừng REC → bản ghi tự phát lặp với khoảng nghỉ; nhấn Dừng.
-- [ ] Nghe mẫu 1 lần và so sánh mẫu/giọng mình theo chu kỳ.
-- [ ] Đổi câu và bài khi đang phát, kiểm tra không có âm thanh chồng nhau.
-- [ ] Thu hai lần với mỗi chế độ lưu, đóng/mở lại app, kiểm tra lịch sử.
-- [ ] Xuất bản ghi hiện tại và ZIP; kiểm tra file xuất trong Downloads/Files.
-- [ ] Chọn thư mục nếu Chrome thiết bị hỗ trợ; nếu không thì xuất ZIP dự phòng.
-- [ ] Mở bài một lần online, tắt mạng và kiểm tra trình phát theo cache sẵn có.
+**Lưu ý về offline:** Khi App Hub đóng gói cả hai thư mục và phát tài nguyên từ cùng server nội bộ/WebView, đường dẫn `../kinhtest2/` hoạt động hoàn toàn cục bộ. Không cần mạng khi nghe, nếu mọi tài nguyên đã được đóng gói đầy đủ. Nhưng chỉ đổi **topic** GitHub không bảo đảm App Hub đã lấy repo, và **không có gì bảo đảm hai repo chạy độc lập offline trong Chrome**: service worker của Tụng Kinh 3 không thể tự chặn URL nằm ngoài scope của nó. Khi chạy riêng trên GitHub Pages, KinhTest2 phải được host cùng origin tại đường dẫn `../kinhtest2/`; nếu không, bài 01 và 02 sẽ không có nguồn phát. Để dùng offline độc lập, cần chủ động cung cấp đường dẫn tới bản tệp đã tải cục bộ (sẽ làm tăng dung lượng).
 
----
+### Đưa vào App Hub
 
-**Nguồn**: `kinhtest2-main.zip` do người dùng cung cấp. Bản mã này không tự tạo repository online; để đưa lên GitHub cần thao tác upload/push vào tài khoản của bạn.
+1. Đưa **toàn bộ nội dung** của ZIP này vào gốc repo `tungkinh3`, có `index.html`, `tracks.json`, `apphub.json`, `practice.js`, `practice.css`, `sw.js`, `IPA.txt`, hai tệp bài 03. **Không thêm lại** bốn tệp bị trùng.
+2. Trong **About → Topics** của repo trên GitHub, thêm `app-hub-module` nếu bản App Hub của bạn phát hiện repo theo topic.
+3. Bản App Hub cần thu thập `kinhtest2` **và** `tungkinh3` vào `public/modules/` theo cấu trúc trên. Nếu bộ thu thập đổi tên/cấp thư mục, cần sửa nó hoặc sửa `tracks.json`; chỉ có hai ZIP module **chưa đủ để sửa chính xác** script của App Hub.
+4. Chạy lệnh kiểm tra đường dẫn trong thư mục gốc của App Hub **sau bước collect**: `python3 public/modules/tungkinh3/tests/verify_apphub_shared.py public/modules`. Nếu bộ thu thập không sao chép thư mục `tests/`, hãy chạy script ở repo Tụng Kinh 3 bằng đường dẫn tương ứng hoặc xác minh thủ công.
+5. Chạy **Publish Offline Web OTA**, áp dụng bản cập nhật và **đóng/mở App Hub** nếu trình cập nhật yêu cầu. Thử mở cả ba bài rồi bật chế độ máy bay để kiểm tra offline.
+
+**Không nhất thiết phải cài APK mới** nếu App Hub hiện tại đã có khả năng thu thập module mới và tải gói OTA, và không cần thêm quyền/plugin native. Điều này cần được xác nhận với mã App Hub đang dùng.
+
+## 2. Hướng dẫn ba chức năng
+
+**Tab 🎙 Luyện từng câu:** Hai nút Câu trước/Câu tiếp, ô nhập số câu, nghe mẫu, REC, so sánh giọng, nghe lại giọng mình, tải bản ghi. Chọn câu qua số 1…N (tổng số câu hiện ở trên). Không cho chuyển khi đang ghi âm.
+
+**Tab 🔁 Lặp đoạn A–B:** Mở bài, tua đến mốc A, nhấn nút A–B, tua đến mốc B và nhấn lần nữa để lặp đoạn. Nhấn lại để tắt.
+
+**Tab 📑 Lặp danh sách:** Tích các câu muốn lặp, nhấn bắt đầu. Có nút hoa sen để chọn hàng loạt theo số/khoảng (VD `5-10,13,20-25` hay `*`). Chuyển tab sẽ dừng các vòng lặp hiện tại, tránh phát chồng âm thanh; những câu đã tích có thể chọn lại khi quay về.
+
+## 3. Ghi âm và lưu bản thu
+
+Trong nút hoa sen → **Setting**:
+
+- Tùy chỉnh cỡ chữ, khoảng nghỉ khi nghe lại giọng mình (mặc định 2 giây), khoảng nghỉ giữa mẫu và bản ghi (1,5 giây), lặp vô hạn hoặc 5/10 lần, đệm MP3 (0,1 giây), bật/tắt tự phát bản ghi.
+- Lưu bản gần nhất mỗi câu (mặc định), lưu nhiều bản hoặc không lưu. Dữ liệu lưu ở **IndexedDB** thuộc thiết bị, không tự tải lên server. Có thể chọn thư mục nếu trình duyệt hỗ trợ, tải bản ghi hoặc xuất tất cả thành ZIP.
+- Cần quyền microphone và HTTPS (hoặc localhost). Chrome Android có thể giới hạn tự phát âm thanh và API ghi file. Dữ liệu IndexedDB có thể bị mất khi xóa dữ liệu app hoặc gỡ ứng dụng, nên **xuất ZIP dự phòng định kỳ**.
+
+## 4. Kiểm thử trước khi sử dụng
+
+- [ ] Mở cả ba bài; bài 01 và 02 phát âm thanh + hiện SRT lấy từ **kinhtest2**; bài 03 lấy dữ liệu nội bộ.
+- [ ] Ngắt Internet trong App Hub, khởi động lại App Hub, phát và tua ngẫu nhiên bài 01, 02, 03.
+- [ ] Chọn lần lượt cả ba tab, xác nhận mỗi lần chỉ **một khung chức năng** xuất hiện, chuyển tab ngắt lặp/phát cũ.
+- [ ] Nhập câu đầu, cuối, câu giữa rồi nhấn Enter/Đi đến; nhập 0, số quá giới hạn, chữ và kiểm tra thông báo.
+- [ ] Đang REC không thể đổi câu hoặc tab; kết thúc REC, nghe tự lặp và so sánh mẫu/giọng mình.
+- [ ] Lặp AB đúng hai mốc; chọn nhiều câu không liền nhau, lặp nhiều lần; đổi bài/tab thì dừng lặp.
+- [ ] Ghi âm, lưu nhiều bản, tải và xuất ZIP; khởi động lại vẫn có lịch sử (khi chế độ cho phép).
+- [ ] Kiểm tra SHA-256 và xác minh không có MP3/SRT bài 01 và 02 trong `tungkinh3` sau build.
+
+**Các tệp đã thay đổi:** `index.html`, `practice.js`, `practice.css`, `tracks.json`, `sw.js`, `README.md`, `tests/smoke.py`. Tệp mới: `apphub.json`, `tests/verify_apphub_shared.py`.

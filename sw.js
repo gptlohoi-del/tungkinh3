@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tungkinh3-offline-v3';
+const CACHE_NAME = 'tungkinh3-offline-v4';
 
 // Chỉ đưa các file cốt lõi chắc chắn tồn tại vào danh sách cài đặt ban đầu.
 // Các cặp file .mp3 và .srt/.txt sẽ được tự động lưu vào Cache ngay khi người dùng chọn bài!

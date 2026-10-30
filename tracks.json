@@ -1,6 +1,36 @@
 [
-  "01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.mp3",
-  "01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.srt",
-  "02 Kinh doc CHANH TINH TAN eng.mp3",
-  "02 Kinh doc CHANH TINH TAN eng.srt"
+  {
+    "title": "01 Kinh nhạc Chánh Tinh Tấn eng",
+    "mp3Name": "01 Kinh nhạc CHÁNH TINH TẤN eng.mp3",
+    "sources": [
+      {
+        "mp3": "../kinhtest2/01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.mp3",
+        "srt": "../kinhtest2/01 Kinh nh#U1ea1c CH#U00c1NH TINH T#U1ea4N eng.srt"
+      },
+      {
+        "mp3": "../kinhtest2/01 Kinh nhạc CHÁNH TINH TẤN eng.mp3",
+        "srt": "../kinhtest2/01 Kinh nhạc CHÁNH TINH TẤN eng.srt"
+      }
+    ]
+  },
+  {
+    "title": "02 Kinh đọc Chánh Tinh Tấn eng",
+    "mp3Name": "02 Kinh doc CHANH TINH TAN eng.mp3",
+    "sources": [
+      {
+        "mp3": "../kinhtest2/02 Kinh doc CHANH TINH TAN eng.mp3",
+        "srt": "../kinhtest2/02 Kinh doc CHANH TINH TAN eng.srt"
+      }
+    ]
+  },
+  {
+    "title": "03 ADDITIONAL PRAYER",
+    "mp3Name": "03 ADDITIONAL PRAYER.mp3",
+    "sources": [
+      {
+        "mp3": "./03 ADDITIONAL PRAYER.mp3",
+        "srt": "./03 ADDITIONAL PRAYER.srt"
+      }
+    ]
+  }
 ]

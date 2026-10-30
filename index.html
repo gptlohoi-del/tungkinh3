@@ -642,9 +642,15 @@
             <div class="subtitle-vn" id="mainSubVn"></div>
         </div>
 
-        <section class="practice-panel" id="practicePanel" aria-labelledby="practiceTitle">
+        <nav class="practice-mode-switch" role="tablist" aria-label="Chọn chức năng luyện tập">
+            <button type="button" id="modePractice" role="tab" aria-controls="practicePanel" aria-selected="true" class="mode-active" onclick="setPracticeMode('practice')">🎙 Luyện câu</button>
+            <button type="button" id="modeAB" role="tab" aria-controls="abPanel" aria-selected="false" onclick="setPracticeMode('ab')">🔁 Lặp A–B</button>
+            <button type="button" id="modeList" role="tab" aria-controls="sentenceLoopPanel" aria-selected="false" onclick="setPracticeMode('list')">📑 DS câu</button>
+        </nav>
+
+        <section class="practice-panel" id="practicePanel" role="tabpanel" aria-labelledby="modePractice">
             <h3 id="practiceTitle">🎙️ Luyện đọc từng câu</h3>
-            <p class="practice-help">Dùng <b>◀ Câu trước / Câu tiếp ▶</b> để chuyển câu ngay tại đây, hoặc chạm <b>🎙 Luyện</b> trong danh sách. Kết thúc REC sẽ tự nghe lặp giọng mình có khoảng nghỉ.</p>
+            <p class="practice-help">Dùng Câu trước / Câu tiếp hoặc nhập số câu để đến ngay câu cần luyện. Kết thúc REC sẽ tự nghe lặp giọng mình có khoảng nghỉ.</p>
             <div class="practice-target" aria-live="polite">
                 <div class="practice-target-number" id="practiceTargetNumber">Chưa chọn câu</div>
                 <div class="practice-target-eng" id="practiceTargetEng">Hãy chọn một câu để luyện đọc.</div>
@@ -655,6 +661,11 @@
                 <button type="button" id="practicePrevBtn" disabled aria-label="Chuyển đến câu trước">◀ Câu trước</button>
                 <button type="button" id="practiceNextBtn" disabled aria-label="Chuyển đến câu tiếp theo">Câu tiếp ▶</button>
             </nav>
+            <form class="practice-jump" id="practiceJumpForm" novalidate aria-label="Chuyển đến câu theo số">
+                <label for="practiceJumpNumber">Đến câu số:</label>
+                <input type="number" id="practiceJumpNumber" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="Số câu" aria-label="Nhập số câu muốn luyện">
+                <button type="submit" id="practiceJumpBtn">Đi đến</button>
+            </form>
             <div class="practice-actions">
                 <button type="button" class="practice-sample" id="practiceSampleBtn" disabled aria-label="Nghe câu mẫu một lần">🔊 Nghe mẫu</button>
                 <button type="button" class="practice-rec" id="practiceRecBtn" disabled aria-label="Bắt đầu ghi âm">🎙 REC</button>
@@ -674,15 +685,15 @@
             </div>
         </section>
 
-        <div class="settings-panel">
-            <h3>🔄 1. Lặp đoạn AB tự do</h3>
+        <section class="settings-panel" id="abPanel" role="tabpanel" aria-labelledby="modeAB" hidden>
+            <h3>🔄 Lặp đoạn A–B</h3>
             <button id="btnAB" onclick="handleABClick()" style="width: 100%;">
                 [ A-B ] Bấm vào đây để đặt mốc A
             </button>
-        </div>
+        </section>
 
-        <div class="settings-panel">
-            <h3>📑 2. Lặp Danh Sách Câu </h3>
+        <section class="settings-panel" id="sentenceLoopPanel" role="tabpanel" aria-labelledby="modeList" hidden>
+            <h3>📑 Lặp danh sách câu</h3>
             <p style="margin-top:0; color:#555; font-size:0.92em;">Tích chọn một hoặc nhiều câu bên dưới. Hệ thống sẽ liên tục lặp lại các câu bạn đã chọn.</p>
             <div class="controls">
                 <button id="btnToggleLoop" onclick="toggleSentenceLoop()">🔄 Bắt đầu lặp</button>
@@ -690,7 +701,7 @@
             </div>
             
             <div class="sentences-list" id="sentencesList"></div>
-        </div>
+        </section>
     </div>
 
     <button class="fab-doc-btn" id="fabQuickSelect" onclick="openRangeModal()" title="Chọn câu & Cài đặt cỡ chữ">
@@ -847,6 +858,51 @@
         
         let abState = 0; let loopA = 0; let loopB = 0; let isABLoopMode = false;
         let selectedSentences = []; let isSentenceLoopMode = false;
+        const PRACTICE_MODE_KEY = 'tungkinh3-active-mode-v1';
+        let currentPracticeMode = 'practice';
+        let trackChangeToken = 0;
+        function setPracticeMode(mode) {
+            if (!['practice', 'ab', 'list'].includes(mode)) return;
+            if (window.tungkinh3Practice && window.tungkinh3Practice.recState !== 'idle') {
+                window.tungkinh3Practice.message('Vui lòng kết thúc REC trước khi đổi chức năng.', true);
+                return;
+            }
+            if (mode !== currentPracticeMode) {
+                if (window.tungkinh3Practice) window.tungkinh3Practice.stop();
+                media.pause();
+                resetAB();
+                stopSentenceLoop();
+            }
+            currentPracticeMode = mode;
+            for (const [key, panelId, tabId] of [
+                ['practice', 'practicePanel', 'modePractice'],
+                ['ab', 'abPanel', 'modeAB'],
+                ['list', 'sentenceLoopPanel', 'modeList']
+            ]) {
+                const panel = document.getElementById(panelId);
+                const tab = document.getElementById(tabId);
+                panel.hidden = key !== mode;
+                tab.setAttribute('aria-selected', String(key === mode));
+                tab.classList.toggle('mode-active', key === mode);
+                tab.tabIndex = key === mode ? 0 : -1;
+            }
+            try { localStorage.setItem(PRACTICE_MODE_KEY, mode); } catch (e) {}
+        }
+
+        document.querySelector('.practice-mode-switch').addEventListener('keydown', (event) => {
+            const modes = ['practice', 'ab', 'list'];
+            const current = modes.indexOf(currentPracticeMode);
+            let next = null;
+            if (event.key === 'ArrowRight') next = (current + 1) % modes.length;
+            else if (event.key === 'ArrowLeft') next = (current + modes.length - 1) % modes.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = modes.length - 1;
+            if (next !== null) {
+                event.preventDefault();
+                setPracticeMode(modes[next]);
+                document.getElementById({ practice:'modePractice', ab:'modeAB', list:'modeList' }[currentPracticeMode]).focus();
+            }
+        });
 
         function isRunningOnPC() {
             return false;
@@ -985,7 +1041,8 @@
         }
 
         function updateMainSubtitle(engText, ipaText, vnText) {
-            mainSubEng.innerHTML = engText || "";
+            // Văn bản phụ đề có thể đến từ tệp của người dùng; không chèn HTML tùy ý.
+            mainSubEng.textContent = engText || "";
             if (ipaText) {
                 mainSubIpa.innerText = `/${ipaText}/`;
                 mainSubIpa.style.display = 'block';
@@ -1039,40 +1096,57 @@
         async function handleTrackChange(trackIdxStr) {
             const idx = parseInt(trackIdxStr, 10);
             if (isNaN(idx) || !availableTracks[idx]) return;
+            const requestToken = ++trackChangeToken;
             const track = availableTracks[idx];
             if (window.tungkinh3Practice && !window.tungkinh3Practice.beforeTrackChange()) return;
             if (window.tungkinh3Practice) window.tungkinh3Practice.onTrackChange();
 
             resetAB();
             stopSentenceLoop();
+            media.pause();
+            media.removeAttribute('src');
+            media.load();
+            sentences = [];
+            renderSentencesList();
             currentSentenceIndex = -1;
 
             const niceTitle = formatDisplayTitle(track.title);
             document.getElementById('appTitle').innerText = niceTitle;
-
             const currentRate = media.playbackRate || 1.0;
-            media.src = track.mp3Url;
-            media.playbackRate = currentRate;
-            btnDownloadMp3.href = track.mp3Url;
-            btnDownloadMp3.setAttribute('download', track.mp3Name || (niceTitle + '.mp3'));
-
-            if (track.srtText) {
-                processSRT(track.srtText);
-                updateMainSubtitle(`Đã chọn: ${niceTitle}<br>Bấm Play hoặc chọn câu bên dưới để nghe.`, "", "");
-            } else if (track.srtUrl) {
+            // Khi quét file cũ sẽ có 1 cặp URL, khi dùng chung sẽ có các nguồn dự phòng.
+            const sources = track.sources || [{ mp3: track.mp3Url, srt: track.srtUrl }];
+            let selectedSource = null;
+            let subtitle = track.srtText || null;
+            for (const source of sources) {
+                if (!source?.mp3 || (!source.srt && !subtitle)) continue;
+                if (subtitle) { selectedSource = source; break; }
                 try {
-                    const res = await fetch(track.srtUrl, { cache: 'no-cache' });
-                    if (res.ok) {
-                        track.srtText = await res.text();
-                        processSRT(track.srtText);
-                        updateMainSubtitle(`Đã chọn: ${niceTitle}<br>Bấm Play hoặc chọn câu bên dưới để nghe.`, "", "");
-                    } else {
-                        updateMainSubtitle(`Không tải được phụ đề (${res.status}).`, "", "");
-                    }
-                } catch (e) {
-                    updateMainSubtitle("Không tải được file phụ đề của bài này.", "", "");
-                }
+                    const res = await fetch(mediaUrl(source.srt));
+                    if (!res.ok) continue;
+                    const text = await res.text();
+                    // Một số WebView trả HTML index fallback khi tệp không tồn tại.
+                    if (!text.includes('-->')) continue;
+                    subtitle = text;
+                    selectedSource = source;
+                    break;
+                } catch (e) { console.warn('Không đọc được phụ đề:', source.srt, e); }
             }
+            // Nếu người dùng đổi bài khi đang tải SRT, không ghi đè bài mới.
+            if (requestToken !== trackChangeToken || String(trackSelector.value) !== String(idx)) return;
+            if (!selectedSource) {
+                btnDownloadMp3.removeAttribute('href');
+                updateMainSubtitle('Không tìm thấy MP3/SRT của bài này. Trong App Hub, hãy kiểm tra module kinhtest2 đã được đóng gói cùng cấp với tungkinh3. Xem README.md.', '', '');
+                if (window.tungkinh3Practice) window.tungkinh3Practice.onSentencesChanged();
+                return;
+            }
+            track.srtText = subtitle;
+            const resolvedMp3 = mediaUrl(selectedSource.mp3);
+            media.src = resolvedMp3;
+            media.playbackRate = currentRate;
+            btnDownloadMp3.href = resolvedMp3;
+            btnDownloadMp3.setAttribute('download', track.mp3Name || (niceTitle + '.mp3'));
+            processSRT(subtitle);
+            updateMainSubtitle(`Đã chọn: ${niceTitle}\nBấm Play hoặc chọn câu để nghe.`, '', '');
         }
 
         // Quét từ danh sách file bất kỳ và ghép cặp tất cả các file .mp3 + (.srt hoặc .txt) trùng tên
@@ -1118,59 +1192,73 @@
             return matched;
         }
 
-        // Quét tự động toàn bộ thư mục trên GitHub Pages hoặc Web Server (Không dùng danh sách tên file cố định)
+        // tracks.json khai báo cả file nội bộ và file dùng chung từ module kinhtest2.
+        // Tự động quét thêm MP3/SRT nội bộ mới, nhưng KHÔNG yêu cầu có bản sao MP3 dùng chung.
+        function mediaUrl(path) {
+            if (/^(blob:|data:|https?:)/i.test(path)) return path;
+            // Mỗi đoạn URL được encode riêng: tên file có dấu #, tiếng Việt và khoảng trắng.
+            return path.split('/').map(segment => {
+                if (segment === '..' || segment === '.' || segment === '') return segment;
+                try { return encodeURIComponent(decodeURIComponent(segment)); }
+                catch (_) { return encodeURIComponent(segment); }
+            }).join('/');
+        }
+
+        function parseDeclaredTracks(items) {
+            if (!Array.isArray(items)) return [];
+            const legacy = matchMp3AndSubPairs(items.filter(item => typeof item === 'string'));
+            const declared = items.filter(item => item && typeof item === 'object' &&
+                typeof item.title === 'string' && Array.isArray(item.sources) && item.sources.length)
+                .map(item => ({
+                    title: item.title,
+                    mp3Name: item.mp3Name || item.title + '.mp3',
+                    sources: item.sources.filter(source => source && typeof source.mp3 === 'string' &&
+                        typeof source.srt === 'string' && source.mp3 && source.srt)
+                })).filter(item => item.sources.length > 0);
+            return declared.concat(legacy);
+        }
+
         async function discoverServerTracks() {
-            // 1. Nếu chạy trên GitHub Pages (*.github.io), dùng GitHub API quét toàn bộ file trong thư mục
+            let declared = [];
+            try {
+                const res = await fetch('./tracks.json');
+                if (res.ok) declared = parseDeclaredTracks(await res.json());
+            } catch (e) { console.warn('Không đọc được tracks.json:', e); }
+
+            let discovered = [];
             if (window.location.hostname.endsWith('github.io')) {
                 try {
                     const owner = window.location.hostname.split('.')[0];
-                    const pathParts = window.location.pathname.split('/').filter(Boolean);
-                    if (pathParts.length >= 1) {
-                        const repo = pathParts[0];
-                        const subDir = pathParts.slice(1).filter(p => !p.toLowerCase().endsWith('.html')).join('/');
-                        const apiUrl = subDir
-                            ? `https://api.github.com/repos/${owner}/${repo}/contents/${subDir}?t=${Date.now()}`
-                            : `https://api.github.com/repos/${owner}/${repo}/contents?t=${Date.now()}`;
-
+                    const parts = window.location.pathname.split('/').filter(Boolean);
+                    if (parts.length) {
+                        const subDir = parts.slice(1).filter(p => !p.toLowerCase().endsWith('.html')).join('/');
+                        const apiUrl = `https://api.github.com/repos/${owner}/${parts[0]}/contents/${subDir ? subDir + '?' : '?'}t=${Date.now()}`;
                         const res = await fetch(apiUrl, { cache: 'no-store' });
                         if (res.ok) {
-                            const items = await res.json();
-                            if (Array.isArray(items)) {
-                                const allFileNames = items.map(i => i.name).filter(Boolean);
-                                const tracks = matchMp3AndSubPairs(allFileNames);
-                                if (tracks.length > 0) return tracks;
-                            }
+                            const rows = await res.json();
+                            if (Array.isArray(rows)) discovered = matchMp3AndSubPairs(rows.map(row => row.name));
                         }
                     }
-                } catch (e) {
-                    console.error("Lỗi khi quét GitHub API:", e);
-                }
+                } catch (e) { console.warn('Không quét được GitHub API:', e); }
             }
-
-            // 2. Nếu chạy trên Local Server có bật Directory Listing, quét các thẻ link trong thư mục
-            try {
-                const res = await fetch('./', { cache: 'no-store' });
-                if (res.ok) {
-                    const html = await res.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const links = Array.from(doc.querySelectorAll('a'))
-                        .map(a => decodeURIComponent((a.getAttribute('href') || '').split('/').pop().split('?')[0]))
-                        .filter(Boolean);
-                    const tracks = matchMp3AndSubPairs(links);
-                    if (tracks.length > 0) return tracks;
-                }
-            } catch (e) {}
-
-            // Danh sách dựng sẵn: giúp chạy trên server tĩnh và offline khi GitHub API không khả dụng.
-            try {
-                const res = await fetch('./tracks.json');
-                if (res.ok) {
-                    const items = await res.json();
-                    if (Array.isArray(items)) return matchMp3AndSubPairs(items);
-                }
-            } catch (e) {}
-            return [];
+            if (!discovered.length && !declared.length) {
+                try {
+                    const res = await fetch('./');
+                    if (res.ok) {
+                        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                        const names = Array.from(doc.querySelectorAll('a')).map(a => {
+                            try { return decodeURIComponent((a.getAttribute('href') || '').split('/').pop().split('?')[0]); }
+                            catch (_) { return ''; }
+                        }).filter(Boolean);
+                        discovered = matchMp3AndSubPairs(names);
+                    }
+                } catch (e) {}
+            }
+            const dedup = new Map();
+            for (const track of discovered) dedup.set(normalizeFileKey(track.mp3Name), track);
+            // Explicit sources win even if GitHub repo has obsolete duplicates.
+            for (const track of declared) dedup.set(normalizeFileKey(track.mp3Name), track);
+            return Array.from(dedup.values()).sort((a, b) => a.title.localeCompare(b.title, 'vi'));
         }
 
         async function handleBatchFiles(fileList) {
@@ -1239,6 +1327,9 @@
             }
 
             loadSavedFontSizeSettings();
+            let initialMode = 'practice';
+            try { initialMode = localStorage.getItem(PRACTICE_MODE_KEY) || 'practice'; } catch (e) {}
+            setPracticeMode(initialMode);
 
             const onPC = isRunningOnPC();
             if (onPC) {
@@ -1541,6 +1632,12 @@
             updateFabBadge();
             if (isSentenceLoopMode) stopSentenceLoop();
         }
+
+        media.addEventListener('error', () => {
+            if (media.currentSrc) {
+                updateMainSubtitle('Không phát được MP3. Nếu đang trong App Hub, hãy kiểm tra KinhTest2 đã có file âm thanh tương ứng và đúng đường dẫn. Nếu chạy trên website, cần có nguồn file dùng chung truy cập được.', '', '');
+            }
+        });
 
         media.addEventListener('timeupdate', () => {
             if (window.tungkinh3Practice && window.tungkinh3Practice.ownsSamplePlayback()) return;

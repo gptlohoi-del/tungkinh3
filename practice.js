@@ -256,6 +256,14 @@
             // Disable them while recording so navigation cannot discard an unfinished take.
             $('practicePrevBtn').disabled = !s || this.index === 0 || this.recState !== 'idle';
             $('practiceNextBtn').disabled = !s || this.index >= sentences.length - 1 || this.recState !== 'idle';
+            const jumpInput = $('practiceJumpNumber');
+            jumpInput.max = String(sentences.length);
+            if (this.lastRenderedJumpIndex !== this.index) {
+                jumpInput.value = s ? String(this.index + 1) : '';
+                this.lastRenderedJumpIndex = this.index;
+            }
+            jumpInput.disabled = !s || this.recState !== 'idle';
+            $('practiceJumpBtn').disabled = !s || this.recState !== 'idle';
             $('practiceRecBtn').disabled = !s || this.recState === 'starting' || this.recState === 'stopping';
             $('practiceRecBtn').classList.toggle('recording', this.recState === 'recording');
             $('practiceRecBtn').textContent = this.recState === 'recording' ? '⏹ Kết thúc REC' : '🎙 REC';
@@ -558,6 +566,22 @@
             $('practiceNextBtn').addEventListener('click', () => {
                 if (this.index >= 0 && this.index < sentences.length - 1) void this.select(this.index + 1, { scroll: false });
             });
+            $('practiceJumpForm').addEventListener('submit', event => {
+                event.preventDefault();
+                if (this.recState !== 'idle') {
+                    this.message('Hãy kết thúc REC trước khi đổi câu.', true);
+                    return;
+                }
+                const raw = $('practiceJumpNumber').value.trim();
+                const num = Number(raw);
+                if (!/^\d+$/.test(raw) || !Number.isSafeInteger(num) || num < 1 || num > sentences.length) {
+                    this.message(`Vui lòng nhập số câu từ 1 đến ${sentences.length}.`, true);
+                    $('practiceJumpNumber').focus();
+                    return;
+                }
+                void this.select(num - 1, { scroll: false });
+                $('practiceJumpNumber').blur();
+            });
             $('practiceSampleBtn').addEventListener('click', () => this.playSampleOnce());
             $('practiceRecBtn').addEventListener('click', () => this.toggleRecord());
             $('practiceCompareBtn').addEventListener('click', () => this.startCompare());
@@ -609,7 +633,10 @@
             $('practiceExportAllBtn').addEventListener('click', () => this.exportAll());
             try { folderHandle = await dbGetMeta('folderHandle'); } catch (_) {}
             updateStorageUI();
-            this.render();
+            // Nếu tải dữ liệu SRT xong trước khi lớp luyện đọc khởi tạo,
+            // vẫn tự chọn câu đầu tiên (tránh lệ thuộc thứ tự tải script/cache).
+            if (sentences.length && this.index < 0) await this.select(0, { scroll: false });
+            else this.render();
         }
     };
     // practice.js is loaded after the legacy inline script but before its async init is complete.
