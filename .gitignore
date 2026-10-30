@@ -1,0 +1,6 @@
+# Dữ liệu người dùng chỉ lưu trên thiết bị, không đưa lên Git
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+__pycache__/
