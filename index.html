@@ -705,19 +705,32 @@
         <section class="settings-panel" id="sentenceLoopPanel" role="tabpanel" aria-labelledby="modeList" hidden>
             <h3>📑 Lặp danh sách câu</h3>
             <p style="margin-top:0; color:#555; font-size:0.92em;">Tích chọn một hoặc nhiều câu bên dưới. Hệ thống sẽ liên tục lặp lại các câu bạn đã chọn.</p>
-            <div class="controls">
-                <button id="btnToggleLoop" onclick="toggleSentenceLoop()">🔄 Bắt đầu lặp</button>
-                <button class="btn-secondary" onclick="clearSelection()">Xóa tất cả</button>
+            <div class="sentence-list-heading">
+                <span id="listSelectionSummary" role="status" aria-live="polite">Đã chọn 0 câu</span>
+                <button type="button" class="list-clear-btn" onclick="clearSelection()">Bỏ chọn</button>
             </div>
-            
-            <div class="sentence-list-tools" role="group" aria-label="Lọc và chọn câu đã lưu">
+            <div class="sentence-list-tools" role="group" aria-label="Lọc danh sách câu">
                 <button type="button" class="active-filter" data-filter="all" onclick="setSentenceFilter('all')">Tất cả</button>
                 <button type="button" data-filter="favorite" onclick="setSentenceFilter('favorite')">☆ Yêu thích</button>
                 <button type="button" data-filter="difficult" onclick="setSentenceFilter('difficult')">⚑ Câu khó</button>
-                <button type="button" onclick="selectSavedList('favorite')">Chọn ☆</button>
-                <button type="button" onclick="selectSavedList('difficult')">Chọn ⚑</button>
             </div>
+            <div class="list-display-actions" role="group" aria-label="Tùy chọn hiển thị danh sách câu">
+                <button type="button" id="listViewToggle" onclick="toggleListCompact()" aria-pressed="false">Thu gọn câu</button>
+                <label><input type="checkbox" id="listShowIpa" onchange="setListDisplayOption('ipa', this.checked)" checked> IPA</label>
+                <label><input type="checkbox" id="listShowVn" onchange="setListDisplayOption('vn', this.checked)" checked> Tiếng Việt</label>
+            </div>
+            <details class="sentence-list-more" id="sentenceListMore">
+                <summary>Chọn nhanh câu đã đánh dấu</summary>
+                <div class="sentence-list-quick-actions">
+                    <button type="button" onclick="selectSavedList('favorite')">☆ Chọn tất cả câu yêu thích</button>
+                    <button type="button" onclick="selectSavedList('difficult')">⚑ Chọn tất cả câu khó</button>
+                </div>
+            </details>
+            <div id="sentenceListEmpty" class="sentence-list-empty" hidden>Không có câu nào trong bộ lọc này.</div>
             <div class="sentences-list" id="sentencesList"></div>
+            <div class="sentence-loop-bottom-bar">
+                <button id="btnToggleLoop" type="button" onclick="toggleSentenceLoop()">▶ Bắt đầu lặp</button>
+            </div>
         </section>
         <p class="app-version" id="appVersion">Tụng Kinh 3 v1.2.0 · Bản web OTA</p>
     </div>
@@ -962,6 +975,8 @@
                 if (hardBtn) { const v = hard.includes(idx); hardBtn.textContent = v ? '⚑' : '⚐'; hardBtn.setAttribute('aria-pressed', String(v)); }
                 row.hidden = sentenceFilter === 'favorite' ? !fav.includes(idx) : sentenceFilter === 'difficult' ? !hard.includes(idx) : false;
             });
+            const emptyLabel = document.getElementById('sentenceListEmpty');
+            emptyLabel.hidden = !sentences.length || Array.from(document.querySelectorAll('.sentence-item')).some(row => !row.hidden);
             updateLearningSummary();
         }
         function toggleSentenceMark(index, kind) {
@@ -995,6 +1010,29 @@
             if (currentSentenceIndex === idx) updateMainSubtitle(sentences[idx].text, sentences[idx].ipa, sentences[idx].vnText);
             renderSentencesList();
             updateHighlight(idx);
+        }
+        // Lưu tùy chọn hiển thị, không đụng tới dữ liệu luyện đọc/ghi âm.
+        const LIST_LAYOUT_KEY = 'tungkinh3-list-layout-v1';
+        let listDisplay = { compact: false, ipa: true, vn: true, ...readJson(LIST_LAYOUT_KEY, {}) };
+        function applyListDisplay() {
+            sentencesListDiv.classList.toggle('list-compact', !!listDisplay.compact);
+            sentencesListDiv.classList.toggle('list-hide-ipa', !listDisplay.ipa);
+            sentencesListDiv.classList.toggle('list-hide-vn', !listDisplay.vn);
+            const toggle = document.getElementById('listViewToggle');
+            toggle.textContent = listDisplay.compact ? 'Hiện đầy đủ' : 'Thu gọn câu';
+            toggle.setAttribute('aria-pressed', String(!!listDisplay.compact));
+            document.getElementById('listShowIpa').checked = !!listDisplay.ipa;
+            document.getElementById('listShowVn').checked = !!listDisplay.vn;
+            // Khi thu gọn, các tùy chọn IPA/VN vẫn được nhớ cho lần mở đầy đủ sau.
+        }
+        function toggleListCompact() {
+            listDisplay.compact = !listDisplay.compact;
+            applyListDisplay(); saveJson(LIST_LAYOUT_KEY, listDisplay);
+        }
+        function setListDisplayOption(option, enabled) {
+            if (!['ipa', 'vn'].includes(option)) return;
+            listDisplay[option] = !!enabled;
+            applyListDisplay(); saveJson(LIST_LAYOUT_KEY, listDisplay);
         }
         function setSentenceFilter(kind) {
             sentenceFilter = ['all', 'favorite', 'difficult'].includes(kind) ? kind : 'all';
@@ -1527,6 +1565,7 @@
             if (!learningState.perTrack || typeof learningState.perTrack !== 'object' || Array.isArray(learningState.perTrack)) learningState.perTrack = {};
             appearance = { ...{theme:window.TK3_DEFAULTS?.appearance?.theme || 'light', easy:!!window.TK3_DEFAULTS?.appearance?.easy}, ...readJson(APPEARANCE_KEY,{}) };
             applyAppearance();
+            applyListDisplay();
             document.getElementById('appTheme').addEventListener('change', e => { appearance.theme = e.target.value; applyAppearance(); saveJson(APPEARANCE_KEY, appearance); });
             document.getElementById('appEasyMode').addEventListener('change', e => { appearance.easy = e.target.checked; applyAppearance(); saveJson(APPEARANCE_KEY, appearance); });
             document.getElementById('practiceFavBtn').addEventListener('click', () => toggleSentenceMark(window.tungkinh3Practice?.index ?? -1,'favorite'));
@@ -1645,24 +1684,34 @@
             sentencesListDiv.innerHTML = '';
             selectedSentences = [];
             isSentenceLoopMode = false;
+            document.getElementById('btnToggleLoop').classList.remove('active');
             updateFabBadge();
-            
+
             sentences.forEach((sentence, index) => {
                 const div = document.createElement('div');
                 div.className = 'sentence-item';
                 div.id = 'sentence-' + index;
                 
                 div.innerHTML = `
-                    <input type="checkbox" class="sentence-checkbox" id="chk-${index}">
-                    <div class="sentence-number">${index + 1}.</div>
+                    <div class="sentence-card-head">
+                        <div class="sentence-heading-left">
+                            <input type="checkbox" class="sentence-checkbox" id="chk-${index}" aria-label="Chọn câu ${index + 1}">
+                            <span class="sentence-number">Câu ${index + 1}</span>
+                        </div>
+                        <div class="sentence-mark-tools">
+                            <button type="button" class="sentence-fav" title="Đánh dấu yêu thích câu ${index + 1}" aria-label="Yêu thích câu ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'favorite')">☆</button>
+                            <button type="button" class="sentence-hard" title="Đánh dấu câu khó ${index + 1}" aria-label="Câu khó ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'difficult')">⚐</button>
+                        </div>
+                    </div>
                     <div class="sentence-text">
                         <div class="sentence-eng-line">${escapePracticeText(sentence.text)}</div>
                         <div class="sentence-ipa">/${escapePracticeText(sentence.ipa)}/</div>
                         ${sentence.vnText ? `<div class="sentence-vn-line">${escapePracticeText(sentence.vnText)}</div>` : ''}
-                        <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
                     </div>
-                    <div class="sentence-mark-tools"><button type="button" class="sentence-fav" title="Yêu thích câu ${index + 1}" aria-label="Yêu thích câu ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'favorite')">☆</button><button type="button" class="sentence-hard" title="Câu khó ${index + 1}" aria-label="Câu khó ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'difficult')">⚐</button></div>
-                    <button type="button" class="practice-sentence-btn" aria-label="Luyện câu ${index + 1}" onclick="event.stopPropagation(); window.tungkinh3Practice.select(${index})">🎙 Luyện</button>
+                    <div class="sentence-card-footer">
+                        <span class="time-badge">⏳ ${formatTime(sentence.start)} – ${formatTime(sentence.end)}</span>
+                        <button type="button" class="practice-sentence-btn" aria-label="Luyện câu ${index + 1}" onclick="event.stopPropagation(); window.tungkinh3Practice.select(${index})">🎙 Luyện</button>
+                    </div>
                 `;
                 
                 div.onclick = (e) => handleRowClick(index, e);
@@ -1684,6 +1733,10 @@
                 fabBadge.style.display = 'flex';
                 fabBadge.innerText = selectedSentences.length;
             } else { fabBadge.style.display = 'none'; }
+            const summary = document.getElementById('listSelectionSummary');
+            summary.textContent = `Đã chọn ${selectedSentences.length}/${sentences.length} câu`;
+            if (!isSentenceLoopMode) document.getElementById('btnToggleLoop').textContent =
+                `▶ Bắt đầu lặp · ${selectedSentences.length} câu`;
         }
 
         function handleRowClick(index, event) {
@@ -1818,7 +1871,7 @@
                     isSentenceLoopMode = true;
                     const btn = document.getElementById('btnToggleLoop');
                     btn.classList.add('active');
-                    btn.innerText = "🛑 Đang lặp (Bấm để Dừng)";
+                    btn.innerText = "⏹ Dừng lặp";
                     media.currentTime = sentences[selectedSentences[0]].start;
                     media.play();
                 } else { stopSentenceLoop(); }
@@ -1834,7 +1887,7 @@
                 isSentenceLoopMode = true;
                 const btn = document.getElementById('btnToggleLoop');
                 btn.classList.add('active');
-                btn.innerText = "🛑 Đang lặp (Bấm để Dừng)";
+                btn.innerText = "⏹ Dừng lặp";
                 media.currentTime = sentences[selectedSentences[0]].start;
                 media.play();
             }
@@ -1844,7 +1897,7 @@
             isSentenceLoopMode = false;
             const btn = document.getElementById('btnToggleLoop');
             btn.classList.remove('active');
-            btn.innerText = "🔄 Bắt đầu lặp";
+            updateFabBadge();
         }
 
         function clearSelection() {
