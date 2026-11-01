@@ -1,0 +1,11 @@
+CHÉP 4 FILE TỪ REPO KINHTEST2 VÀO THƯ MỤC NÀY, ĐỔI TÊN CHÍNH XÁC:
+
+01.mp3   <= 01 Kinh nhạc CHÁNH TINH TẤN eng.mp3 (hoặc bản tên #U1ea1c...)
+01.srt   <= 01 Kinh nhạc CHÁNH TINH TẤN eng.srt (hoặc bản tên #U1ea1c...)
+02.mp3   <= 02 Kinh doc CHANH TINH TAN eng.mp3
+02.srt   <= 02 Kinh doc CHANH TINH TAN eng.srt
+
+KHÔNG COPY file thứ 03, vì nó có sẵn ở thư mục gốc.
+Bạn có thể upload 4 file sau, rồi Publish OTA để đồng bộ tới APK đã cài.
+
+Khuyên chép trước khi tạo APK đầu tiên để có đủ ba bài ngay khi mất mạng.

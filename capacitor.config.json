@@ -1,0 +1,17 @@
+{
+  "appId": "com.gptlohoi.tungkinh3",
+  "appName": "Tụng Kinh 3",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "appReadyTimeout": 20000,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": false,
+      "statsUrl": ""
+    }
+  }
+}

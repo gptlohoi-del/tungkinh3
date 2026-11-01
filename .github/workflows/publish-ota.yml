@@ -1,0 +1,69 @@
+name: Publish Tung Kinh 3 OTA (Pages)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: pages-tungkinh3
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-ota:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TK3_OTA_BASE_URL: ${{ vars.TK3_OTA_BASE_URL }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install JavaScript dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify entire offline media set
+        run: |
+          npm run test:repo
+          npm run check:media
+
+      - name: Auto-increment OTA version from workflow run number
+        env:
+          OTA_RUN_NUMBER: ${{ github.run_number }}
+        run: python3 scripts/prepare_version.py
+
+      - name: Build web bundle and OTA ZIP
+        run: |
+          npm run build:web
+          npm run ota:package
+          unzip -t site/updates/*.zip | tail -1
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-ota
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy OTA to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

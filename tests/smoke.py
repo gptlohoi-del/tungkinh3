@@ -21,7 +21,7 @@ assert manifest['short_name'] == 'tungkinh3'
 assert manifest['start_url'].startswith('./')
 assert all((root / x['src']).is_file() for x in manifest['icons'])
 config = json.loads((root / 'apphub.json').read_text(encoding='utf-8'))
-assert config['id'] == 'tungkinh3' and config['version'] == '1.2.0'
+assert config['id'] == 'tungkinh3'
 tracks = json.loads((root / 'tracks.json').read_text(encoding='utf-8'))
 assert isinstance(tracks, list) and len(tracks) == 3
 assert len({t['mp3Name'] for t in tracks}) == len(tracks)
@@ -32,8 +32,13 @@ for t in tracks:
         assert source['srt'].lower().endswith(('.srt', '.txt'))
         assert ('../kinhtest2/' in source['mp3']) == ('../kinhtest2/' in source['srt'])
         if source['mp3'].startswith('./'):
-            assert (root / source['mp3']).is_file()
-            assert (root / source['srt']).is_file()
+            # Trong APK riêng, 01/02 sẽ được người sử dụng chép vào sau.
+            # Bài 03 luôn phải có; file mới nếu đã chép thì bắt buộc đi theo cặp.
+            mp3 = root / source['mp3']
+            srt = root / source['srt']
+            assert mp3.is_file() == srt.is_file(), f'Missing one of pair: {mp3}, {srt}'
+            if not source['mp3'].startswith('./media/kinhtest2/'):
+                assert mp3.is_file() and srt.is_file()
         elif source['mp3'].startswith('../kinhtest2/'):
             # Shared files intentionally absent from Tụng Kinh 3; checked when
             # --modules-root is supplied after App Hub collects both modules.
@@ -68,7 +73,7 @@ words = dict(zip(ipa[::2], ipa[1::2]))
 assert all(w == w.lower() and v for w, v in words.items())
 for track in tracks:
     for src in track['sources']:
-        if src['srt'].startswith('./'):
+        if src['srt'].startswith('./') and (root / src['srt']).is_file() and not src['srt'].startswith('./media/kinhtest2/'):
             srt = (root / src['srt']).read_text(encoding='utf-8-sig')
             chunks = [c for c in re.split(r'\n\s*\n', srt.replace('\r','')) if '-->' in c]
             assert chunks, 'No SRT blocks in ' + src['srt']

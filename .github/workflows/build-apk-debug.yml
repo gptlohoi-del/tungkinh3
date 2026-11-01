@@ -1,0 +1,57 @@
+name: Build Tung Kinh 3 APK Debug
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TK3_OTA_BASE_URL: ${{ vars.TK3_OTA_BASE_URL }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install JavaScript dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify web code and warn about missing MP3
+        run: npm run test:repo
+
+      - name: Build bundled offline web app
+        run: npm run build:web
+
+      - name: Generate Android project from Capacitor
+        run: |
+          npx cap add android
+          npx cap sync android
+          python3 scripts/patch_android.py
+
+      - name: Build auto-signed DEBUG APK (no GitHub Secrets)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Publish APK download artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TungKinh3-Debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

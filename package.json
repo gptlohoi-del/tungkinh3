@@ -1,0 +1,23 @@
+{
+  "name": "tungkinh3-hybrid-ota",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Tụng Kinh 3 standalone Android APK with manual GitHub Pages live updates",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "test:repo": "python3 tests/smoke.py && python3 -m unittest discover -s tests -p \"test_*.py\" && node --check src/ota-entry.js && node --check src/ota-logic.mjs && node --test tests/ota-logic.test.mjs && python3 scripts/validate_media.py",
+    "check:media": "python3 scripts/validate_media.py --strict",
+    "ota:package": "python3 scripts/package_ota.py",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capgo/capacitor-updater": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "esbuild": "^0.25.0"
+  }
+}
