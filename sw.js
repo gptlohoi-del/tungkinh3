@@ -1,3 +1,5 @@
+// Giữ tên cache v4 để KHÔNG XÓA các MP3 đã được lưu offline từ bản trước.
+// Worker vẫn được nâng cấp do nội dung sw.js đổi và bổ sung asset mới khi install.
 const CACHE_NAME = 'tungkinh3-offline-v4';
 
 // Chỉ đưa các file cốt lõi chắc chắn tồn tại vào danh sách cài đặt ban đầu.
@@ -9,6 +11,8 @@ const CORE_ASSETS = [
     './IPA.txt',
     './practice.js',
     './practice.css',
+    './enhancements.css',
+    './app-config.js',
     './tracks.json',
     './icon-192.png',
     './icon-512.png'

@@ -2,11 +2,12 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tungkinh3 — Luyện nghe và đọc kinh</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#2c3e50">
     <link rel="stylesheet" href="./practice.css">
+    <script src="./app-config.js"></script>
     <style>
         :root {
             --main-eng-size: 1.3em;
@@ -583,6 +584,7 @@
             text-align: right;
         }
     </style>
+    <link rel="stylesheet" href="./enhancements.css">
 </head>
 <body>
     <div class="container">
@@ -637,11 +639,13 @@
         </div>
 
         <div class="subtitle-display" id="currentSubtitle">
+            <span id="sentenceCounter" class="sentence-counter" aria-label="Số thứ tự câu" hidden></span>
             <div class="subtitle-eng" id="mainSubEng">Đang tải dữ liệu...</div>
             <div class="subtitle-ipa" id="mainSubIpa"></div>
             <div class="subtitle-vn" id="mainSubVn"></div>
         </div>
 
+        <p id="learningProgress" class="learning-progress" aria-live="off">Chưa có câu được mở.</p>
         <nav class="practice-mode-switch" role="tablist" aria-label="Chọn chức năng luyện tập">
             <button type="button" id="modePractice" role="tab" aria-controls="practicePanel" aria-selected="true" class="mode-active" onclick="setPracticeMode('practice')">🎙 Luyện câu</button>
             <button type="button" id="modeAB" role="tab" aria-controls="abPanel" aria-selected="false" onclick="setPracticeMode('ab')">🔁 Lặp A–B</button>
@@ -652,10 +656,15 @@
             <h3 id="practiceTitle">🎙️ Luyện đọc từng câu</h3>
             <p class="practice-help">Dùng Câu trước / Câu tiếp hoặc nhập số câu để đến ngay câu cần luyện. Kết thúc REC sẽ tự nghe lặp giọng mình có khoảng nghỉ.</p>
             <div class="practice-target" aria-live="polite">
-                <div class="practice-target-number" id="practiceTargetNumber">Chưa chọn câu</div>
+                <div class="practice-target-heading"><div class="practice-target-number" id="practiceTargetNumber">Chưa chọn câu</div><div class="practice-target-marks"><button type="button" id="practiceEditVnBtn" title="Sửa nghĩa tiếng Việt của câu" aria-label="Sửa nghĩa tiếng Việt của câu">✎</button><button type="button" id="practiceFavBtn" title="Đánh dấu yêu thích" aria-pressed="false">☆</button><button type="button" id="practiceHardBtn" title="Đánh dấu câu khó" aria-pressed="false">⚑</button></div></div>
                 <div class="practice-target-eng" id="practiceTargetEng">Hãy chọn một câu để luyện đọc.</div>
                 <div class="practice-target-ipa" id="practiceTargetIpa"></div>
                 <div class="practice-target-vn" id="practiceTargetVn"></div>
+                <div id="practiceVnEditor" class="practice-vn-editor" hidden>
+                    <label for="practiceVnText">Nghĩa tiếng Việt của câu này (chỉ lưu trên thiết bị)</label>
+                    <textarea id="practiceVnText" rows="3" placeholder="Nhập nghĩa tiếng Việt…"></textarea>
+                    <div><button type="button" id="practiceVnSave">Lưu nghĩa</button><button type="button" id="practiceVnCancel">Hủy</button></div>
+                </div>
             </div>
             <nav class="practice-navigation" aria-label="Điều hướng câu luyện đọc">
                 <button type="button" id="practicePrevBtn" disabled aria-label="Chuyển đến câu trước">◀ Câu trước</button>
@@ -668,6 +677,7 @@
             </form>
             <div class="practice-actions">
                 <button type="button" class="practice-sample" id="practiceSampleBtn" disabled aria-label="Nghe câu mẫu một lần">🔊 Nghe mẫu</button>
+                <button type="button" class="practice-slow" id="practiceSlowBtn" disabled title="Nghe câu mẫu ở tốc độ 0,75 lần">🐢 Mẫu 0.75×</button>
                 <button type="button" class="practice-rec" id="practiceRecBtn" disabled aria-label="Bắt đầu ghi âm">🎙 REC</button>
                 <button type="button" class="practice-compare" id="practiceCompareBtn" disabled aria-label="So sánh luân phiên hai giọng">🔁 So sánh</button>
             </div>
@@ -700,8 +710,16 @@
                 <button class="btn-secondary" onclick="clearSelection()">Xóa tất cả</button>
             </div>
             
+            <div class="sentence-list-tools" role="group" aria-label="Lọc và chọn câu đã lưu">
+                <button type="button" class="active-filter" data-filter="all" onclick="setSentenceFilter('all')">Tất cả</button>
+                <button type="button" data-filter="favorite" onclick="setSentenceFilter('favorite')">☆ Yêu thích</button>
+                <button type="button" data-filter="difficult" onclick="setSentenceFilter('difficult')">⚑ Câu khó</button>
+                <button type="button" onclick="selectSavedList('favorite')">Chọn ☆</button>
+                <button type="button" onclick="selectSavedList('difficult')">Chọn ⚑</button>
+            </div>
             <div class="sentences-list" id="sentencesList"></div>
         </section>
+        <p class="app-version" id="appVersion">Tụng Kinh 3 v1.2.0 · Bản web OTA</p>
     </div>
 
     <button class="fab-doc-btn" id="fabQuickSelect" onclick="openRangeModal()" title="Chọn câu & Cài đặt cỡ chữ">
@@ -722,7 +740,7 @@
                     📄 Chọn số câu
                 </button>
                 <button type="button" class="modal-tab-btn" id="tabBtnSetting" onclick="switchModalTab('setting')">
-                    ⚙️ Setting
+                    ⚙️ Cài đặt
                 </button>
             </div>
 
@@ -749,6 +767,13 @@
             </div>
 
             <div id="modalSectionSetting" style="display: none;">
+                <div class="practice-setting-group">
+                    <h4>👁️ Giao diện dễ đọc</h4>
+                    <div class="practice-setting-field"><label for="appTheme">Màu giao diện</label><select id="appTheme"><option value="light">Sáng</option><option value="dark">Tối</option></select></div>
+                    <div class="practice-setting-field"><label for="appEasyMode">Nút to, dễ nhìn (người lớn tuổi)</label><input type="checkbox" id="appEasyMode"></div>
+                    <p class="practice-setting-note">Các tùy chọn và vị trí học được ghi nhớ trên thiết bị. Không thay đổi file âm thanh.</p>
+                    <div class="practice-storage-tools"><button type="button" id="exportPreferencesBtn">⬇ Sao lưu lựa chọn (.json)</button><button type="button" id="importPreferencesBtn">⬆ Khôi phục lựa chọn</button><input type="file" accept=".json,application/json" id="importPreferencesFile" hidden></div>
+                </div>
                 <div class="setting-group">
                     <div class="setting-group-title">📺 Khung phụ đề chính (Khi chạy MP3)</div>
                     <div class="setting-row">
@@ -806,8 +831,9 @@
                     <h4>🎙️ Luyện đọc và ghi âm</h4>
                     <div class="practice-setting-field"><label for="practiceSelfPause">Nghỉ khi lặp giọng mình (giây)</label><input type="number" id="practiceSelfPause" min="0" max="10" step="0.5" value="2"></div>
                     <div class="practice-setting-field"><label for="practiceComparePause">Nghỉ giữa hai giọng (giây)</label><input type="number" id="practiceComparePause" min="0" max="10" step="0.5" value="1.5"></div>
-                    <div class="practice-setting-field"><label for="practiceRepeatCount">Số lần phát</label><select id="practiceRepeatCount"><option value="0">Vô hạn</option><option value="5">5 lần</option><option value="10">10 lần</option></select></div>
+                    <div class="practice-setting-field"><label for="practiceRepeatCount">Số lần phát</label><select id="practiceRepeatCount"><option value="0">Vô hạn</option><option value="1">1 lần</option><option value="2">2 lần</option><option value="3">3 lần</option><option value="5">5 lần</option><option value="10">10 lần</option></select></div>
                     <div class="practice-setting-field"><label for="practiceSamplePadding">Đệm câu MP3 (giây)</label><input type="number" id="practiceSamplePadding" min="0" max="1" step="0.05" value="0.1"></div>
+                    <div class="practice-setting-field"><label for="practiceCue">Âm báo khi bắt đầu/kết thúc REC</label><input type="checkbox" id="practiceCue"></div>
                     <div class="practice-setting-field"><label for="practiceAutoReplay">Tự phát ngay sau dừng REC</label><input type="checkbox" id="practiceAutoReplay" checked></div>
                 </div>
                 <div class="practice-setting-group">
@@ -818,10 +844,12 @@
                     <div id="practiceLocationSettings">
                         <label class="practice-radio"><input type="radio" name="practiceStorageLocation" value="app" checked><span><b>Bộ nhớ ứng dụng</b> (đề xuất cho Android): lưu tự động bằng IndexedDB, không hỏi thư mục mỗi lần.</span></label>
                         <label class="practice-radio"><input type="radio" name="practiceStorageLocation" value="folder"><span><b>Thư mục tôi chọn</b>: vẫn lưu bản trong ứng dụng để dự phòng; tự ghi thêm file ra thư mục khi trình duyệt cấp quyền.</span></label>
+                        <div class="practice-setting-field"><label for="practiceExportScope">Xuất bản ghi</label><select id="practiceExportScope"><option value="all">Tất cả các bài</option><option value="track">Bài đang chọn</option><option value="today">Trong ngày hôm nay</option></select></div>
                         <div class="practice-storage-tools">
                             <button type="button" id="practiceChooseFolderBtn">📂 Chọn thư mục lưu</button>
                             <button type="button" id="practiceExportAllBtn">📦 Xuất tất cả (.zip)</button>
                         </div>
+                        <p id="practiceStorageStats" class="practice-setting-note" aria-live="polite"></p>
                         <p id="practiceFolderStatus" class="practice-setting-note">Nếu chọn thư mục không khả dụng trên thiết bị này, dùng chức năng xuất ra Files/Downloads.</p>
                         <p class="practice-setting-note">Bộ nhớ trình duyệt có thể bị xóa; hãy xuất bản sao định kỳ. Ghi âm không tải lên máy chủ.</p>
                     </div>
@@ -850,6 +878,7 @@
         const rangeInput = document.getElementById('rangeInput');
         const fabBadge = document.getElementById('fabBadge');
         const totalSentenceHint = document.getElementById('totalSentenceHint');
+        const sentenceCounter = document.getElementById('sentenceCounter');
         
         const ipaDict = {};
         let availableTracks = [];
@@ -861,6 +890,165 @@
         const PRACTICE_MODE_KEY = 'tungkinh3-active-mode-v1';
         let currentPracticeMode = 'practice';
         let trackChangeToken = 0;
+        // Dữ liệu sở thích và tiến độ tách biệt với IndexedDB bản ghi để OTA không mất dữ liệu.
+        const USER_STATE_KEY = 'tungkinh3-learning-state-v1';
+        const APPEARANCE_KEY = 'tungkinh3-appearance-v1';
+        let learningState = { lastTrack: '', perTrack: {} };
+        let sentenceFilter = 'all';
+        let appearance = { theme: 'light', easy: false };
+        function readJson(key, fallback) {
+            try { const result = JSON.parse(localStorage.getItem(key) || 'null'); return result && typeof result === 'object' && !Array.isArray(result) ? result : fallback; }
+            catch (_) { return fallback; }
+        }
+        function saveJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.warn('Không lưu được thiết lập:', e); } }
+        function currentTrackKey() {
+            const t = availableTracks[Number(trackSelector.value)];
+            return t?.mp3Name || t?.title || '';
+        }
+        function trackMemory(create = false) {
+            const key = currentTrackKey();
+            if (!key) return null;
+            if (!learningState.perTrack[key] && create) learningState.perTrack[key] = { index: 0, favorite: [], difficult: [], visited: [], selected: [] };
+            return learningState.perTrack[key] || null;
+        }
+        function safeIndices(values) {
+            return Array.isArray(values) ? Array.from(new Set(values.filter(i => Number.isSafeInteger(i) && i >= 0 && i < sentences.length))).sort((a, b) => a - b) : [];
+        }
+        function persistLearning() { saveJson(USER_STATE_KEY, learningState); }
+        function rememberSentence(index) {
+            if (!sentences[index]) return;
+            const memory = trackMemory(true);
+            if (!memory) return;
+            if (!Array.isArray(memory.visited)) memory.visited = [];
+            if (!memory.visited.includes(index)) memory.visited.push(index);
+            if (memory.index !== index || learningState.lastTrack !== currentTrackKey() || memory.visited.length === 1) {
+                memory.index = index;
+            }
+            learningState.lastTrack = currentTrackKey();
+            persistLearning(); updateLearningSummary();
+        }
+        function updateLearningSummary() {
+            const memory = trackMemory(false);
+            const count = safeIndices(memory?.visited).length;
+            const fav = safeIndices(memory?.favorite).length;
+            const hard = safeIndices(memory?.difficult).length;
+            document.getElementById('learningProgress').textContent = sentences.length ?
+                `Đã mở ${count}/${sentences.length} câu · ☆ ${fav} yêu thích · ⚑ ${hard} câu khó` : 'Chưa có dữ liệu câu.';
+        }
+        function updateSentenceCounter(visible = true) {
+            const valid = visible && sentences[currentSentenceIndex] && currentSentenceIndex >= 0;
+            sentenceCounter.hidden = !valid;
+            if (valid) {
+                sentenceCounter.textContent = `${currentSentenceIndex + 1}/${sentences.length}`;
+                sentenceCounter.setAttribute('aria-label', `Câu ${currentSentenceIndex + 1} trên ${sentences.length}`);
+            }
+        }
+        function updateMarkButtons() {
+            const memory = trackMemory(false);
+            const fav = safeIndices(memory?.favorite);
+            const hard = safeIndices(memory?.difficult);
+            for (const [kind, values] of [['favorite', fav], ['difficult', hard]]) {
+                const btn = document.getElementById(kind === 'favorite' ? 'practiceFavBtn' : 'practiceHardBtn');
+                const active = values.includes(window.tungkinh3Practice?.index ?? -1);
+                btn.setAttribute('aria-pressed', String(active));
+                btn.classList.toggle('is-marked', active);
+                btn.textContent = kind === 'favorite' ? (active ? '★' : '☆') : (active ? '⚑' : '⚐');
+                btn.disabled = !sentences[window.tungkinh3Practice?.index ?? -1];
+            }
+            document.querySelectorAll('.sentence-item').forEach((row, idx) => {
+                const favBtn = row.querySelector('.sentence-fav');
+                const hardBtn = row.querySelector('.sentence-hard');
+                if (favBtn) { const v = fav.includes(idx); favBtn.textContent = v ? '★' : '☆'; favBtn.setAttribute('aria-pressed', String(v)); }
+                if (hardBtn) { const v = hard.includes(idx); hardBtn.textContent = v ? '⚑' : '⚐'; hardBtn.setAttribute('aria-pressed', String(v)); }
+                row.hidden = sentenceFilter === 'favorite' ? !fav.includes(idx) : sentenceFilter === 'difficult' ? !hard.includes(idx) : false;
+            });
+            updateLearningSummary();
+        }
+        function toggleSentenceMark(index, kind) {
+            if (!sentences[index] || !['favorite', 'difficult'].includes(kind)) return;
+            const memory = trackMemory(true);
+            const marks = safeIndices(memory[kind]);
+            memory[kind] = marks.includes(index) ? marks.filter(i => i !== index) : [...marks, index].sort((a,b)=>a-b);
+            persistLearning(); updateMarkButtons();
+        }
+        function toggleVietnameseEditor() {
+            const editor = document.getElementById('practiceVnEditor');
+            const idx = window.tungkinh3Practice?.index ?? -1;
+            if (!sentences[idx]) return;
+            editor.hidden = !editor.hidden;
+            if (!editor.hidden) {
+                document.getElementById('practiceVnText').value = sentences[idx].vnText || '';
+                document.getElementById('practiceVnText').focus();
+            }
+        }
+        function saveVietnameseEdit() {
+            const idx = window.tungkinh3Practice?.index ?? -1;
+            if (!sentences[idx]) return;
+            const text = document.getElementById('practiceVnText').value.trim().slice(0, 2000);
+            const m = trackMemory(true);
+            if (!m.vnEdits || typeof m.vnEdits !== 'object') m.vnEdits = {};
+            if (text) m.vnEdits[idx] = text; else delete m.vnEdits[idx];
+            sentences[idx].vnText = text || sentences[idx].originalVnText || '';
+            persistLearning();
+            document.getElementById('practiceVnEditor').hidden = true;
+            if (window.tungkinh3Practice) window.tungkinh3Practice.render();
+            if (currentSentenceIndex === idx) updateMainSubtitle(sentences[idx].text, sentences[idx].ipa, sentences[idx].vnText);
+            renderSentencesList();
+            updateHighlight(idx);
+        }
+        function setSentenceFilter(kind) {
+            sentenceFilter = ['all', 'favorite', 'difficult'].includes(kind) ? kind : 'all';
+            document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active-filter', b.dataset.filter === sentenceFilter));
+            updateMarkButtons();
+        }
+        function persistSelectedSentences() {
+            const m = trackMemory(true);
+            if (m) { m.selected = safeIndices(selectedSentences); persistLearning(); }
+        }
+        function applyStoredSelection() {
+            selectedSentences = safeIndices(trackMemory(false)?.selected);
+            selectedSentences.forEach(i => { document.getElementById('sentence-' + i)?.classList.add('selected'); const checkbox = document.getElementById('chk-' + i); if (checkbox) checkbox.checked = true; });
+            updateFabBadge();
+        }
+        function selectSavedList(kind) {
+            if (isSentenceLoopMode) stopSentenceLoop();
+            selectedSentences = safeIndices(trackMemory(false)?.[kind]);
+            document.querySelectorAll('.sentence-item').forEach((row, i) => {
+                row.classList.toggle('selected', selectedSentences.includes(i));
+                const c = row.querySelector('input[type="checkbox"]'); if (c) c.checked = selectedSentences.includes(i);
+            });
+            persistSelectedSentences(); updateFabBadge();
+            if (!selectedSentences.length) alert('Chưa đánh dấu câu nào trong danh sách này.');
+        }
+        function applyAppearance() {
+            document.body.classList.toggle('theme-dark', appearance.theme === 'dark');
+            document.body.classList.toggle('easy-mode', appearance.easy === true);
+            document.getElementById('appTheme').value = appearance.theme === 'dark' ? 'dark' : 'light';
+            document.getElementById('appEasyMode').checked = appearance.easy === true;
+        }
+        function downloadPreferences() {
+            const payload = { kind: 'tungkinh3-preferences', version: 1, exportedAt: new Date().toISOString(),
+                learning: learningState, appearance, practiceSettings: readJson('tungkinh3-practice-settings-v1', {}),
+                fontSettings: readJson('kinh_font_settings', {}), mode: currentPracticeMode, speed: media.playbackRate };
+            const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+            const a = document.createElement('a'); a.href = url; a.download = 'tungkinh3-cai-dat.json'; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        async function importPreferences(file) {
+            if (!file || file.size > 1024 * 1024) throw new Error('File sao lưu không hợp lệ hoặc quá lớn.');
+            const data = JSON.parse(await file.text());
+            if (data.kind !== 'tungkinh3-preferences' || data.version !== 1 || !data.learning || typeof data.learning.perTrack !== 'object') throw new Error('Không đúng file sao lưu Tụng Kinh 3.');
+            if (!confirm('Khôi phục cài đặt và các câu đã đánh dấu? Bản ghi âm hiện tại sẽ được giữ nguyên.')) return;
+            learningState = { lastTrack: String(data.learning.lastTrack || ''), perTrack: data.learning.perTrack || {} };
+            persistLearning();
+            appearance = { theme: data.appearance?.theme === 'dark' ? 'dark' : 'light', easy: data.appearance?.easy === true };
+            saveJson(APPEARANCE_KEY, appearance); applyAppearance();
+            if (data.practiceSettings && typeof data.practiceSettings === 'object') saveJson('tungkinh3-practice-settings-v1', data.practiceSettings);
+            if (data.fontSettings && typeof data.fontSettings === 'object') saveJson('kinh_font_settings', data.fontSettings);
+            alert('Đã khôi phục lựa chọn. Tải lại ứng dụng để áp dụng đầy đủ cài đặt. Bản ghi vẫn giữ nguyên.');
+            location.reload();
+        }
+
         function setPracticeMode(mode) {
             if (!['practice', 'ab', 'list'].includes(mode)) return;
             if (window.tungkinh3Practice && window.tungkinh3Practice.recState !== 'idle') {
@@ -905,7 +1093,7 @@
         });
 
         function isRunningOnPC() {
-            return false;
+            return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         }
 
         function toggleLocalPanel() {
@@ -925,6 +1113,7 @@
                 opt.classList.toggle('active', opt.innerText.startsWith(rate + 'x'));
             });
             document.getElementById('speedMenuList').classList.remove('show');
+            try { localStorage.setItem('tungkinh3-speed-v1', String(rate)); } catch (_) {}
         }
 
         document.addEventListener('click', () => {
@@ -1017,9 +1206,12 @@
 
         function convertSentenceToIPA(text) {
             if (!text) return "";
-            return text.replace(/[a-zA-Z]+/g, (word) => {
-                const lower = word.toLowerCase();
-                return ipaDict[lower] !== undefined ? ipaDict[lower] : word;
+            return text.replace(/[a-zA-Z]+(?:[’\']s)?/g, (token) => {
+                const isPossessive = /[’\']s$/i.test(token);
+                const word = isPossessive ? token.slice(0, -2) : token;
+                const ipa = ipaDict[word.toLowerCase()];
+                // Possessive Buddha's -> /...z/; avoid spelling out the letter S.
+                return ipa !== undefined ? ipa + (isPossessive ? 'z' : '') : '⟨' + token + '⟩';
             });
         }
 
@@ -1043,6 +1235,7 @@
         function updateMainSubtitle(engText, ipaText, vnText) {
             // Văn bản phụ đề có thể đến từ tệp của người dùng; không chèn HTML tùy ý.
             mainSubEng.textContent = engText || "";
+            updateSentenceCounter(!!engText && engText !== '♪ ♪ ♪' && !!sentences[currentSentenceIndex] && engText === sentences[currentSentenceIndex].text);
             if (ipaText) {
                 mainSubIpa.innerText = `/${ipaText}/`;
                 mainSubIpa.style.display = 'block';
@@ -1108,18 +1301,21 @@
             media.load();
             sentences = [];
             renderSentencesList();
-            currentSentenceIndex = -1;
+            currentSentenceIndex = -1; updateSentenceCounter(false);
+            document.getElementById('practiceVnEditor').hidden = true;
 
             const niceTitle = formatDisplayTitle(track.title);
             document.getElementById('appTitle').innerText = niceTitle;
             const currentRate = media.playbackRate || 1.0;
             // Khi quét file cũ sẽ có 1 cặp URL, khi dùng chung sẽ có các nguồn dự phòng.
             const sources = track.sources || [{ mp3: track.mp3Url, srt: track.srtUrl }];
-            let selectedSource = null;
+            // Remember the exact MP3/SRT source pair that actually worked.
+            // Otherwise a repeated track switch could wrongly revert to a broken first alias.
+            let selectedSource = track.selectedSource || null;
             let subtitle = track.srtText || null;
             for (const source of sources) {
-                if (!source?.mp3 || (!source.srt && !subtitle)) continue;
-                if (subtitle) { selectedSource = source; break; }
+                if (selectedSource && subtitle) break;
+                if (!source?.mp3 || !source.srt) continue;
                 try {
                     const res = await fetch(mediaUrl(source.srt));
                     if (!res.ok) continue;
@@ -1140,13 +1336,14 @@
                 return;
             }
             track.srtText = subtitle;
+            track.selectedSource = selectedSource;
             const resolvedMp3 = mediaUrl(selectedSource.mp3);
             media.src = resolvedMp3;
             media.playbackRate = currentRate;
             btnDownloadMp3.href = resolvedMp3;
             btnDownloadMp3.setAttribute('download', track.mp3Name || (niceTitle + '.mp3'));
             processSRT(subtitle);
-            updateMainSubtitle(`Đã chọn: ${niceTitle}\nBấm Play hoặc chọn câu để nghe.`, '', '');
+            if (!sentences.length) updateMainSubtitle(`Đã chọn: ${niceTitle}\nKhông có câu phụ đề hợp lệ.`, '', '');
         }
 
         // Quét từ danh sách file bất kỳ và ghép cặp tất cả các file .mp3 + (.srt hoặc .txt) trùng tên
@@ -1326,7 +1523,24 @@
                 }
             }
 
+            learningState = readJson(USER_STATE_KEY, { lastTrack: '', perTrack: {} });
+            if (!learningState.perTrack || typeof learningState.perTrack !== 'object' || Array.isArray(learningState.perTrack)) learningState.perTrack = {};
+            appearance = { ...{theme:window.TK3_DEFAULTS?.appearance?.theme || 'light', easy:!!window.TK3_DEFAULTS?.appearance?.easy}, ...readJson(APPEARANCE_KEY,{}) };
+            applyAppearance();
+            document.getElementById('appTheme').addEventListener('change', e => { appearance.theme = e.target.value; applyAppearance(); saveJson(APPEARANCE_KEY, appearance); });
+            document.getElementById('appEasyMode').addEventListener('change', e => { appearance.easy = e.target.checked; applyAppearance(); saveJson(APPEARANCE_KEY, appearance); });
+            document.getElementById('practiceFavBtn').addEventListener('click', () => toggleSentenceMark(window.tungkinh3Practice?.index ?? -1,'favorite'));
+            document.getElementById('practiceHardBtn').addEventListener('click', () => toggleSentenceMark(window.tungkinh3Practice?.index ?? -1,'difficult'));
+            document.getElementById('practiceEditVnBtn').addEventListener('click', toggleVietnameseEditor);
+            document.getElementById('practiceVnSave').addEventListener('click', saveVietnameseEdit);
+            document.getElementById('practiceVnCancel').addEventListener('click', () => { document.getElementById('practiceVnEditor').hidden = true; });
+            document.getElementById('exportPreferencesBtn').addEventListener('click', downloadPreferences);
+            document.getElementById('importPreferencesBtn').addEventListener('click', () => document.getElementById('importPreferencesFile').click());
+            document.getElementById('importPreferencesFile').addEventListener('change', async e => { try { await importPreferences(e.target.files[0]); } catch (err) { alert('Không nhập được sao lưu: '+ err.message); } finally { e.target.value = ''; } });
             loadSavedFontSizeSettings();
+            let savedRate = window.TK3_DEFAULTS?.playbackSpeed || 1;
+            try { savedRate = Number(localStorage.getItem('tungkinh3-speed-v1') || savedRate); } catch (_) {}
+            if ([.5,.75,1,1.25,1.5,1.75,2].includes(savedRate)) setPlaybackSpeed(savedRate);
             let initialMode = 'practice';
             try { initialMode = localStorage.getItem(PRACTICE_MODE_KEY) || 'practice'; } catch (e) {}
             setPracticeMode(initialMode);
@@ -1365,8 +1579,10 @@
             if (tracks.length > 0) {
                 availableTracks = tracks;
                 renderTrackSelector();
-                trackSelector.value = "0";
-                await handleTrackChange("0");
+                const lastIndex = tracks.findIndex(t => (t.mp3Name || t.title) === learningState.lastTrack);
+                const idx = lastIndex >= 0 ? lastIndex : 0;
+                trackSelector.value = String(idx);
+                await handleTrackChange(String(idx));
             } else {
                 renderTrackSelector();
                 updateMainSubtitle("Chưa tìm thấy cặp file .mp3 và .srt/.txt cùng tên trong thư mục.", "", "");
@@ -1400,11 +1616,16 @@
                                 end: timeToSeconds(timeMatch[2]),
                                 text: engPart,
                                 vnText: vnPart,
+                                originalVnText: vnPart,
                                 ipa: convertSentenceToIPA(engPart)
                             });
                         }
                     }
                 }
+            });
+            const translations = trackMemory(false)?.vnEdits || {};
+            parsedData.forEach((item, idx) => {
+                if (typeof translations[idx] === 'string' && translations[idx].trim()) item.vnText = translations[idx].trim();
             });
             sentences = parsedData;
             renderSentencesList();
@@ -1437,14 +1658,18 @@
                     <div class="sentence-text">
                         <div class="sentence-eng-line">${escapePracticeText(sentence.text)}</div>
                         <div class="sentence-ipa">/${escapePracticeText(sentence.ipa)}/</div>
+                        ${sentence.vnText ? `<div class="sentence-vn-line">${escapePracticeText(sentence.vnText)}</div>` : ''}
                         <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
                     </div>
+                    <div class="sentence-mark-tools"><button type="button" class="sentence-fav" title="Yêu thích câu ${index + 1}" aria-label="Yêu thích câu ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'favorite')">☆</button><button type="button" class="sentence-hard" title="Câu khó ${index + 1}" aria-label="Câu khó ${index + 1}" aria-pressed="false" onclick="event.stopPropagation(); toggleSentenceMark(${index}, 'difficult')">⚐</button></div>
                     <button type="button" class="practice-sentence-btn" aria-label="Luyện câu ${index + 1}" onclick="event.stopPropagation(); window.tungkinh3Practice.select(${index})">🎙 Luyện</button>
                 `;
                 
                 div.onclick = (e) => handleRowClick(index, e);
                 sentencesListDiv.appendChild(div);
             });
+            applyStoredSelection();
+            updateMarkButtons();
             if (window.tungkinh3Practice) window.tungkinh3Practice.onListRendered();
         }
 
@@ -1477,12 +1702,12 @@
             }
             
             selectedSentences.sort((a, b) => a - b);
-            updateFabBadge();
+            updateFabBadge(); persistSelectedSentences();
 
             if (sentences[index]) {
                 currentSentenceIndex = index;
                 updateMainSubtitle(sentences[index].text, sentences[index].ipa, sentences[index].vnText);
-                updateHighlight(index);
+                updateHighlight(index); rememberSentence(index);
             }
             
             if (isSentenceLoopMode && selectedSentences.length === 0) { stopSentenceLoop(); }
@@ -1576,7 +1801,7 @@
                 if (itemEl) itemEl.classList.add('selected');
                 if (chkEl) chkEl.checked = true;
             });
-            updateFabBadge();
+            updateFabBadge(); persistSelectedSentences();
             closeRangeModal();
 
             if (selectedSentences.length > 0) {
@@ -1629,7 +1854,7 @@
                 const chk = item.querySelector('input[type="checkbox"]');
                 if (chk) chk.checked = false;
             });
-            updateFabBadge();
+            updateFabBadge(); persistSelectedSentences();
             if (isSentenceLoopMode) stopSentenceLoop();
         }
 
@@ -1685,7 +1910,7 @@
                 if (currentSentenceIndex !== foundIdx) {
                     currentSentenceIndex = foundIdx;
                     updateMainSubtitle(sentences[foundIdx].text, sentences[foundIdx].ipa, sentences[foundIdx].vnText);
-                    updateHighlight(foundIdx);
+                    updateHighlight(foundIdx); rememberSentence(foundIdx);
                 }
 
                 if (currentTime >= currentBlock.end - 0.05) {
@@ -1706,7 +1931,7 @@
                 if (currentSentenceIndex !== foundIndex) {
                     currentSentenceIndex = foundIndex;
                     updateMainSubtitle(sentences[foundIndex].text, sentences[foundIndex].ipa, sentences[foundIndex].vnText);
-                    updateHighlight(foundIndex);
+                    updateHighlight(foundIndex); rememberSentence(foundIndex);
                 }
             } else {
                 if (!media.paused && !isSentenceLoopMode) {

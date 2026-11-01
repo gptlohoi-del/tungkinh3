@@ -1,0 +1,83 @@
+/* Tụng Kinh 3 — phần hiển thị nâng cao. Không thay thế layout cũ. */
+.sentence-counter {
+  align-self: flex-end; font-size: 12px; font-variant-numeric: tabular-nums;
+  font-weight: 600; letter-spacing: .03em; color: #ecf3fa; background: #435d72;
+  border-radius: 6px; padding: 3px 7px; text-shadow: none; line-height: 1.2;
+}
+.sentence-counter[hidden] {display:none !important}
+.learning-progress {margin: -4px 3px 9px; font-size: .82rem; color: #475569; line-height: 1.4}
+.practice-target-heading {display:flex; justify-content:space-between; align-items:center; gap:8px}
+.practice-target-marks {display:flex; gap:6px}
+.practice-target-marks button, .sentence-mark-tools button {
+  min-width:33px; min-height:33px; color:#25496b; border:1px solid #bbd2e8;
+  border-radius:7px; background:#fff; font-size:1.25rem; cursor:pointer; padding:3px 5px;
+}
+.practice-target-marks button.is-marked, .sentence-mark-tools button[aria-pressed="true"] {
+  color:#975c02; background:#fff3c4; border-color:#e1b963;
+}
+.sentence-mark-tools {display:flex; flex-direction:column; gap:4px; margin-left:4px}
+.practice-actions {grid-template-columns: repeat(2,minmax(0,1fr))}
+.practice-actions .practice-slow {background:#5b527e}
+.sentence-list-tools {display:flex; gap:6px; flex-wrap:wrap; margin-bottom:9px}
+.sentence-list-tools button {border:1px solid #abc5db; background:#f5f9ff; color:#1b466b; border-radius:7px; min-height:35px; font-size:.82rem; font-weight:600; padding:5px 9px; cursor:pointer}
+.sentence-list-tools button.active-filter {background:#125e91; color:white}
+.sentence-item[hidden] {display:none !important}
+.sentence-item .sentence-text {min-width:0}
+.practice-setting-field select {min-width:108px}
+body.easy-mode {font-size:17px}
+body.easy-mode .practice-help {font-size:1rem}
+body.easy-mode .practice-mode-switch button,
+body.easy-mode .practice-actions button,
+body.easy-mode .practice-navigation button,
+body.easy-mode .practice-bottom-actions button {min-height:57px; font-size:1.04rem}
+body.easy-mode .practice-target-eng {font-size:1.2rem}
+body.easy-mode .sentence-item {padding-top:12px; padding-bottom:12px}
+body.easy-mode .sentence-mark-tools button {min-height:42px;min-width:42px}
+body.easy-mode .sentence-counter {font-size:13px}
+/* Dark theme: keep contrast, preserve the colored subtitle/panel elements. */
+body.theme-dark, body.theme-dark .container {background:#101c2b; color:#e8eef8}
+body.theme-dark #appTitle {color:#f2f5ff}
+body.theme-dark .playlist-bar {background:#172c43; border-color:#365e79}
+body.theme-dark .playlist-bar label {color:#d8edff}
+body.theme-dark .playlist-select {background:#23374c; color:#fff; border-color:#567b98}
+body.theme-dark .player-wrapper, body.theme-dark .settings-panel, body.theme-dark .practice-panel,
+body.theme-dark .practice-target, body.theme-dark .practice-history-entry {background:#192d43; color:#eaf2fc; border-color:#42627c}
+body.theme-dark .settings-panel h3, body.theme-dark .practice-panel h3,
+body.theme-dark .practice-target-eng, body.theme-dark .practice-target-number,
+body.theme-dark .practice-help, body.theme-dark .practice-setting-field label,
+body.theme-dark .practice-setting-note, body.theme-dark .practice-status,
+body.theme-dark .practice-target-vn, body.theme-dark .practice-player-label,
+body.theme-dark .practice-history-title, body.theme-dark .learning-progress {color:#daeaff}
+body.theme-dark .practice-target-ipa {color:#9ddbf9}
+body.theme-dark .sentences-list {background:#1a2c41; color:#eaf2fc; border-color:#45617a}
+body.theme-dark .sentence-number {color:#c3d5ea}
+body.theme-dark .sentence-item {border-color:#334e65}
+body.theme-dark .sentence-item:hover {background:#284157}
+body.theme-dark .sentence-item.selected {background:#4b4022}
+body.theme-dark .sentence-item.current {background:#26485f}
+body.theme-dark .sentence-item.selected.current {background:#5b5130}
+body.theme-dark .practice-navigation button:not(:disabled), body.theme-dark .practice-mode-switch button:not(.mode-active),
+body.theme-dark .sentence-list-tools button:not(.active-filter), body.theme-dark .practice-jump input,
+body.theme-dark .practice-setting-field select, body.theme-dark .practice-setting-field input[type=number],
+body.theme-dark .practice-target-marks button, body.theme-dark .sentence-mark-tools button {background:#233e57;color:#e9f4ff;border-color:#64829e}
+body.theme-dark .practice-target-marks button.is-marked, body.theme-dark .sentence-mark-tools button[aria-pressed="true"] {background:#655129; color:#ffe69b}
+body.theme-dark .practice-history button, body.theme-dark .practice-storage-tools button {background:#284c68 !important;color:#fff !important}
+body.theme-dark .subtitle-display {background:#24384b}
+body.theme-dark .modal-tab-btn {color:#1b3f59}
+/* Mobile: preserve space for the small sentence marker alongside longer text. */
+@media(max-width:420px) {
+  .sentence-mark-tools button {min-width:30px; min-height:30px; padding:2px}
+  .sentence-item .practice-sentence-btn {padding:7px 4px !important; margin-left:4px}
+  .sentence-list-tools button {font-size:.78rem}
+}
+
+.practice-vn-editor {margin-top:10px; border-top:1px solid #c8dbe8; padding-top:9px}
+.practice-vn-editor label {display:block; font-size:.86rem; margin-bottom:4px; color:#345770}
+.practice-vn-editor textarea {display:block; width:100%; padding:9px; border:1px solid #a4bccc; border-radius:7px; font:inherit; resize:vertical}
+.practice-vn-editor button {margin:7px 6px 0 0; background:#17659a; color:#fff; border:0; border-radius:6px; padding:8px 13px; min-height:40px}
+.sentence-vn-line {color:#4d6885; margin:3px 0; font-size:.88rem}
+body.theme-dark .sentence-vn-line, body.theme-dark .practice-vn-editor label {color:#bed5ed}
+body.theme-dark .practice-vn-editor textarea {background:#24455e;color:#fff}
+
+.app-version {text-align:center;font-size:.73rem;color:#66788a;margin:12px 0 4px}
+body.theme-dark .app-version {color:#b4c6d8}

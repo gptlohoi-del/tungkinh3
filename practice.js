@@ -10,7 +10,7 @@
     const DB_NAME = 'tungkinh3-recordings-v1';
     const SETTINGS_KEY = 'tungkinh3-practice-settings-v1';
     const defaults = { selfPause: 2, comparePause: 1.5, repeatCount: 0, padding: 0.10,
-        autoReplay: true, storageMode: 'latest', storageLocation: 'app' };
+        autoReplay: true, cue: true, storageMode: 'latest', storageLocation: 'app', ...(window.TK3_DEFAULTS?.practice || {}) };
     const cfg = { ...defaults };
     let dbPromise;
     let folderHandle = null;
@@ -56,7 +56,8 @@
         const db = await openDB();
         return new Promise((resolve, reject) => {
             const tx = db.transaction('metadata', 'readwrite');
-            tx.objectStore('metadata').put({ key, value });
+            // 'metadata' v1 uses out-of-line keys, not keyPath. Keep schema for existing devices.
+            tx.objectStore('metadata').put({ value }, key);
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
             tx.onabort = () => reject(tx.error);
@@ -98,15 +99,17 @@
         cfg.selfPause = keepBetween(cfg.selfPause, 0, 10, 2);
         cfg.comparePause = keepBetween(cfg.comparePause, 0, 10, 1.5);
         cfg.padding = keepBetween(cfg.padding, 0, 1, .10);
-        cfg.repeatCount = [0, 5, 10].includes(Number(cfg.repeatCount)) ? Number(cfg.repeatCount) : 0;
+        cfg.repeatCount = [0, 1, 2, 3, 5, 10].includes(Number(cfg.repeatCount)) ? Number(cfg.repeatCount) : 0;
         if (!['temporary', 'latest', 'multiple'].includes(cfg.storageMode)) cfg.storageMode = 'latest';
         if (!['app', 'folder'].includes(cfg.storageLocation)) cfg.storageLocation = 'app';
         cfg.autoReplay = cfg.autoReplay !== false;
+        cfg.cue = cfg.cue !== false;
         $('practiceSelfPause').value = cfg.selfPause;
         $('practiceComparePause').value = cfg.comparePause;
         $('practiceRepeatCount').value = cfg.repeatCount;
         $('practiceSamplePadding').value = cfg.padding;
         $('practiceAutoReplay').checked = cfg.autoReplay;
+        $('practiceCue').checked = cfg.cue;
         document.querySelector(`input[name="practiceStorageMode"][value="${cfg.storageMode}"]`).checked = true;
         document.querySelector(`input[name="practiceStorageLocation"][value="${cfg.storageLocation}"]`).checked = true;
         updateStorageUI();
@@ -200,6 +203,40 @@
         })();
     }
 
+
+    async function refreshStorageStats() {
+        const el = $('practiceStorageStats');
+        try {
+            const records = await dbGetAll('recordings');
+            const bytes = records.reduce((sum, record) => sum + (record.blob?.size || 0), 0);
+            const mb = (bytes / 1048576).toFixed(2);
+            let device = '';
+            if (navigator.storage?.estimate) {
+                const e = await navigator.storage.estimate();
+                if (Number.isFinite(e.quota)) device = ` · Hạn mức ước tính ${Math.round(e.quota / 1048576)} MB`;
+            }
+            el.textContent = `Đã lưu ${records.length} bản ghi (${mb} MB)${device}. Hãy xuất bản sao định kỳ.`;
+        } catch (_) { el.textContent = 'Chưa đo được dung lượng. Bản ghi vẫn được lưu theo cài đặt hiện tại.'; }
+    }
+    async function playRecordingCue(start) {
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) return;
+        let ctx;
+        try {
+            ctx = new Context();
+            if (ctx.state === 'suspended') await Promise.race([ctx.resume(), new Promise(resolve => setTimeout(resolve, 250))]);
+            const osc = ctx.createOscillator(); const gain = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.value = start ? 740 : 540;
+            gain.gain.setValueAtTime(.0001, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(.07, ctx.currentTime + .012);
+            gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .11);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + .12);
+            if (start) await new Promise(resolve => setTimeout(resolve, 160));
+            setTimeout(() => { void ctx.close().catch(()=>{}); }, 220);
+        } catch (_) { try { await ctx?.close(); } catch (_) {} }
+    }
+
     const trainer = {
         index: -1,
         track: '',
@@ -217,6 +254,7 @@
         selfAudio: null,
         expectedSelfPlay: false,
         sampleEnd: 0,
+        sampleOriginalRate: null,
         message(text, error = false) {
             $('practiceStatus').textContent = text;
             $('practiceStatus').classList.toggle('error', error);
@@ -243,7 +281,11 @@
         },
         onSentencesChanged() {
             this.cancelRecording(); this.stop(); this.index = -1; this.replaceSession(null);
-            if (sentences.length) this.select(0, { scroll: false });
+            if (sentences.length) {
+                const last = window.trackMemory ? window.trackMemory(false)?.index : 0;
+                const wanted = Number.isSafeInteger(last) && last >= 0 && last < sentences.length ? last : 0;
+                void this.select(wanted, { scroll: false });
+            }
             else { this.render(); }
         },
         render() {
@@ -269,11 +311,14 @@
             $('practiceRecBtn').textContent = this.recState === 'recording' ? '⏹ Kết thúc REC' : '🎙 REC';
             $('practiceRecBtn').setAttribute('aria-label', this.recState === 'recording' ? 'Kết thúc ghi âm' : 'Bắt đầu ghi âm');
             $('practiceSampleBtn').disabled = !s || this.recState !== 'idle';
+            $('practiceSlowBtn').disabled = !s || this.recState !== 'idle';
             $('practiceCompareBtn').disabled = !s || !this.session || this.recState !== 'idle';
             $('practiceSelfBtn').disabled = !this.session || this.recState !== 'idle';
             $('practiceDownloadBtn').disabled = !this.session || this.recState !== 'idle';
             $('practiceSelfAudio').style.display = this.session ? 'block' : 'none';
             this.onListRendered();
+            if (window.updateMarkButtons) window.updateMarkButtons();
+            // Functions declared by the legacy page are top-level globals in non-module script.
         },
         replaceSession(record) {
             if (this.sessionUrl) URL.revokeObjectURL(this.sessionUrl);
@@ -291,12 +336,16 @@
             this.stop();
             media.pause();
             stopSentenceLoop(); resetAB();
+            if (opts.scroll !== false && window.currentPracticeMode !== 'practice') window.setPracticeMode?.('practice');
+            document.getElementById('practiceVnEditor').hidden = true;
             this.track = this.trackName();
             this.index = index;
             this.replaceSession(null);
             currentSentenceIndex = index;
             updateMainSubtitle(sentences[index].text, sentences[index].ipa, sentences[index].vnText);
             updateHighlight(index);
+            if (window.rememberSentence) window.rememberSentence(index);
+            if (window.updateMarkButtons) window.updateMarkButtons();
             this.message(`Đã chọn câu ${index + 1}. Nhấn REC để đọc.`);
             const token = ++this.generation;
             await this.refreshHistory(token, true);
@@ -313,6 +362,12 @@
             this.expectedSelfPlay = false;
             this.selfAudio.pause();
             if (oldMode === 'sample' || oldMode === 'compare') media.pause();
+            this.restoreSampleRate();
+        },
+        restoreSampleRate() {
+            if (this.sampleOriginalRate != null) {
+                media.playbackRate = this.sampleOriginalRate; this.sampleOriginalRate = null;
+            }
         },
         cancelRecording() {
             // Used for track replacement; never save a partial recording to the wrong sentence.
@@ -350,6 +405,8 @@
                 recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
                 recorder.onerror = () => this.message('Ghi âm bị lỗi. Hãy thử lại.', true);
                 recorder.onstop = () => this.processRecording(token, chunks, recorder.mimeType, originTrack, originIndex);
+                if (cfg.cue) await playRecordingCue(true);
+                if (token !== this.recordingGeneration) { stream.getTracks().forEach(t => t.stop()); return; }
                 recorder.start();
                 this.recState = 'recording'; this.render();
                 this.message('🔴 Đang ghi âm… Nhấn KẾT THÚC REC khi đọc xong.');
@@ -364,7 +421,7 @@
             if (this.recState !== 'recording' || !this.recorder) return;
             this.recState = 'stopping'; this.render();
             this.message('Đang hoàn tất bản ghi…');
-            try { this.recorder.stop(); } catch (e) {
+            try { this.recorder.stop(); if (cfg.cue) void playRecordingCue(false); } catch (e) {
                 this.cancelRecording(); this.render(); this.message('Không thể kết thúc REC: ' + e.message, true);
             }
         },
@@ -388,6 +445,7 @@
             if (cfg.storageMode !== 'temporary') {
                 try {
                     await dbSave(record, cfg.storageMode);
+                    void refreshStorageStats();
                     await this.refreshHistory(this.generation, false);
                     if (cfg.storageLocation === 'folder') {
                         const synced = await this.writeToFolder(record);
@@ -426,6 +484,7 @@
                         this.stop(); await dbDelete(record.id);
                         if (this.session?.id === record.id) this.replaceSession(null);
                         await this.refreshHistory(this.generation);
+                        void refreshStorageStats();
                     }]
                 ]) {
                     const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = label;
@@ -441,10 +500,11 @@
             const token = this.generation;
             await this.playSelfSegment(token);
         },
-        async playSampleOnce() {
+        async playSampleOnce(rate = null) {
             if (this.index < 0 || this.recState !== 'idle') return;
             this.stop(); stopSentenceLoop(); resetAB();
             this.playMode = 'sample';
+            if (rate && Number.isFinite(rate)) { this.sampleOriginalRate = media.playbackRate; media.playbackRate = rate; }
             await this.playSampleSegment(this.generation);
         },
         async startCompare() {
@@ -480,7 +540,7 @@
             if (token !== this.generation) return;
             clearInterval(this.sampleTimer); this.sampleTimer = 0;
             media.pause();
-            if (this.playMode === 'sample') { this.playMode = 'idle'; this.message('Đã nghe xong câu mẫu.'); return; }
+            if (this.playMode === 'sample') { this.playMode = 'idle'; this.restoreSampleRate(); this.message('Đã nghe xong câu mẫu.'); return; }
             if (this.playMode === 'compare') this.schedule(token, cfg.comparePause, () => this.playSelfSegment(token));
         },
         async playSelfSegment(token) {
@@ -530,6 +590,7 @@
         async writeToFolder(record) {
             if (!folderHandle) {
                 try { folderHandle = await dbGetMeta('folderHandle'); } catch (_) {}
+            void refreshStorageStats();
             }
             if (!folderHandle) return false;
             try {
@@ -543,7 +604,10 @@
         async exportAll() {
             const btn = $('practiceExportAllBtn'); btn.disabled = true;
             try {
-                const records = await dbGetAll('recordings');
+                const allRecords = await dbGetAll('recordings');
+                const scope = $('practiceExportScope').value;
+                const today = new Date().toDateString();
+                const records = allRecords.filter(r => scope === 'all' || (scope === 'track' ? r.track === this.trackName() : new Date(r.createdAt).toDateString() === today));
                 if (!records.length) { this.message('Chưa có bản ghi đã lưu để xuất.'); return; }
                 const total = records.reduce((n, r) => n + r.blob.size, 0);
                 if (total > 80 * 1024 * 1024 && !confirm('Có nhiều bản ghi, file ZIP có thể lớn. Bạn muốn tiếp tục?')) return;
@@ -551,6 +615,13 @@
                 const entries = records.map(r => ({ name: `${safeName(r.track)}/${r.name}`, blob: r.blob }));
                 const info = `tungkinh3 — Sao luu ghi am\nSo ban ghi: ${records.length}\nNgay xuat: ${new Date().toLocaleString('vi-VN')}\nKhong tai len may chu.\n`;
                 entries.push({ name: 'README.txt', blob: new Blob([info], { type: 'text/plain' }) });
+                // Include settings as a separate, manually restorable JSON; do not modify the existing recordings store.
+                const settings = { kind: 'tungkinh3-preferences', version: 1, exportedAt: new Date().toISOString(),
+                    learning: JSON.parse(localStorage.getItem('tungkinh3-learning-state-v1') || '{}'),
+                    appearance: JSON.parse(localStorage.getItem('tungkinh3-appearance-v1') || '{}'),
+                    practiceSettings: JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'),
+                    fontSettings: JSON.parse(localStorage.getItem('kinh_font_settings') || '{}') };
+                entries.push({ name: 'tungkinh3-cai-dat.json', blob: new Blob([JSON.stringify(settings, null, 2)], {type:'application/json'}) });
                 const zip = await zipArchive(entries);
                 downloadBlob(zip, `tungkinh3_BanGhi_${new Date().toISOString().slice(0, 10)}.zip`);
                 this.message(`✅ Đã tạo ZIP gồm ${records.length} bản ghi. Kiểm tra Downloads/Files trên Android.`);
@@ -583,6 +654,7 @@
                 $('practiceJumpNumber').blur();
             });
             $('practiceSampleBtn').addEventListener('click', () => this.playSampleOnce());
+            $('practiceSlowBtn').addEventListener('click', () => this.playSampleOnce(.75));
             $('practiceRecBtn').addEventListener('click', () => this.toggleRecord());
             $('practiceCompareBtn').addEventListener('click', () => this.startCompare());
             $('practiceSelfBtn').addEventListener('click', () => this.startSelfLoop());
@@ -610,13 +682,14 @@
             media.addEventListener('play', () => {
                 if (this.playMode === 'self') this.stop();
             });
-            for (const id of ['practiceSelfPause', 'practiceComparePause', 'practiceRepeatCount', 'practiceSamplePadding', 'practiceAutoReplay']) {
+            for (const id of ['practiceSelfPause', 'practiceComparePause', 'practiceRepeatCount', 'practiceSamplePadding', 'practiceAutoReplay', 'practiceCue']) {
                 $(id).addEventListener('change', () => {
                     cfg.selfPause = keepBetween($('practiceSelfPause').value, 0, 10, 2);
                     cfg.comparePause = keepBetween($('practiceComparePause').value, 0, 10, 1.5);
                     cfg.repeatCount = Number($('practiceRepeatCount').value);
                     cfg.padding = keepBetween($('practiceSamplePadding').value, 0, 1, .1);
                     cfg.autoReplay = $('practiceAutoReplay').checked;
+                    cfg.cue = $('practiceCue').checked;
                     $('practiceSelfPause').value = cfg.selfPause;
                     $('practiceComparePause').value = cfg.comparePause;
                     $('practiceSamplePadding').value = cfg.padding;
@@ -635,7 +708,10 @@
             updateStorageUI();
             // Nếu tải dữ liệu SRT xong trước khi lớp luyện đọc khởi tạo,
             // vẫn tự chọn câu đầu tiên (tránh lệ thuộc thứ tự tải script/cache).
-            if (sentences.length && this.index < 0) await this.select(0, { scroll: false });
+            if (sentences.length && this.index < 0) {
+                const i = window.trackMemory?.(false)?.index;
+                await this.select(Number.isSafeInteger(i) && i >= 0 && i < sentences.length ? i : 0, { scroll: false });
+            }
             else this.render();
         }
     };
