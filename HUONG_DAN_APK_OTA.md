@@ -28,7 +28,7 @@ Bộ nhận diện trong `scripts/discover_media.py`:
 ```text
 tungkinh3/
 ├── .github/workflows/
-│   ├── build-apk-debug.yml          # Build APK thử, ký debug tự động
+│   ├── build-apk-debug.yml          # Build TungKinh EV Debug + Release khi có khóa
 │   └── publish-ota.yml              # Publish bản web OTA lên Pages
 ├── media/kinhtest2/                 # Chép file MP3/SRT tên gốc vào đây
 ├── scripts/
@@ -52,14 +52,15 @@ tungkinh3/
 2. Nếu chưa chép file bài 01/02, vẫn có thể build **APK thử với bài 03**. Tới khi bổ sung đủ 4 file, bạn chỉ cần chạy OTA; không cần cài lại APK.
 3. Nếu repo GitHub của bạn là `gptlohoi-del/tungkinh3`, OTA mặc định sử dụng `https://gptlohoi-del.github.io/tungkinh3/`. Nếu khác tên repo, cấu hình biến trong GitHub: **Settings → Secrets and variables → Actions → Variables → New repository variable**; tên `TK3_OTA_BASE_URL`, giá trị `https://TEN-USER.github.io/TEN-REPO/` (có dấu `/` cuối). Tốt nhất cấu hình trước khi build APK đầu tiên.
 
-## 4. Build APK thử, không cần tự tạo khóa
+## 4. Build TungKinh EV APK (Debug và Release tùy chọn)
 
-1. Vào GitHub repo → **Actions** → **Build Tung Kinh 3 APK Debug** → **Run workflow** (chọn `main`).
-2. Job sẽ tự chạy kiểm tra, dò tên tệp, tạo `www/`, sinh dự án Android/Capacitor, xây `app-debug.apk` và ký bằng khóa Debug tự động của Gradle.
-3. Khi job thành công, vào **Artifacts** → tải `TungKinh3-Debug-APK`, giải nén để lấy `app-debug.apk`, cài thử trên điện thoại.
-4. Cấp quyền microphone khi được yêu cầu, thử bài 03, thử ghi âm và mở khi không có mạng.
+1. Vào GitHub → **Actions → Build TungKinh EV APK → Run workflow** (chọn nhánh `main`).
+2. Workflow tự kiểm thử, tạo `www/`, tạo Android project, đặt tên ứng dụng **TungKinh EV** và sử dụng icon hình chắp tay trong `android-assets/res`.
+3. Không cần GitHub Secrets: tải Artifact `TungKinh-EV-1.2.N-debug`, giải nén lấy file `TungKinh EV-1.2.N-debug.apk` (N là số lần chạy workflow).
+4. Nếu có đủ bốn Secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, workflow cũng tạo Artifact Release, chứa file `TungKinh EV-1.2.N.apk` ký cùng khóa cố định.
+5. Cấp quyền microphone khi được hỏi; thử bài 03, ghi âm, bật chế độ máy bay và kiểm tra nội dung offline.
 
-**Quan trọng:** APK Android luôn phải được ký. Debug signing không yêu cầu 4 GitHub Secrets, nhưng khóa debug ở những runner khác nhau có thể khác nhau. Do đó APK Debug phù hợp để thử nghiệm hơn là cài đặt lâu dài trên thiết bị do quản trị viên quản lý. Nếu cần cài đè APK native về sau, nên chuyển sang khóa Release cố định **ngay từ bản APK đầu tiên**.
+**Quan trọng:** Chữ **TungKinh EV** dưới icon Android chỉ thay đổi sau khi cài APK mới; OTA không thể đổi icon launcher hay tên native đã được cài. Giữ nguyên `appId` để bảo toàn danh tính ứng dụng. Debug APK trên các GitHub runner khác nhau có thể có chữ ký khác nhau nên không bảo đảm cài đè được. Đối với điện thoại do quản trị viên quản lý, nên chốt bản Release ký cố định ngay từ đầu. Phiên bản APK `1.2.N` độc lập với số lần chạy workflow OTA; OTA vẫn dùng `web-version.json`. 
 
 ## 5. Phát hành OTA sau khi chép các bài 01/02
 

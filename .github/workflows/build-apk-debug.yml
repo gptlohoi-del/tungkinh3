@@ -1,4 +1,4 @@
-name: Build Tung Kinh 3 APK Debug
+name: Build TungKinh EV APK
 
 on:
   workflow_dispatch:
@@ -6,10 +6,14 @@ on:
 permissions:
   contents: read
 
+# Version is unique to this APK workflow. OTA versions are managed separately.
+env:
+  APK_VERSION: 1.2.${{ github.run_number }}
+
 jobs:
-  android-debug:
+  android:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
     env:
       TK3_OTA_BASE_URL: ${{ vars.TK3_OTA_BASE_URL }}
     steps:
@@ -30,28 +34,119 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Verify web code and warn about missing MP3
+      - name: Verify code and offline assets
         run: npm run test:repo
 
       - name: Build bundled offline web app
         run: npm run build:web
 
-      - name: Generate Android project from Capacitor
+      - name: Generate Android project with TungKinh EV launcher icon
         run: |
           npx cap add android
           npx cap sync android
           python3 scripts/patch_android.py
 
-      - name: Build auto-signed DEBUG APK (no GitHub Secrets)
+      - name: Set Android APK versionCode and versionName
+        shell: bash
+        run: |
+          cat >> android/app/build.gradle <<'GRADLE'
+          android {
+              defaultConfig {
+                  // Higher than Capacitor's initial versionCode=1.
+                  versionCode (10000 + Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1"))
+                  versionName System.getenv("APK_VERSION") ?: "1.2.1"
+              }
+          }
+          GRADLE
+
+      - name: Build automatically signed Debug APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon :app:assembleDebug
 
-      - name: Publish APK download artifact
+      - name: Rename Debug APK
+        shell: bash
+        run: |
+          source="android/app/build/outputs/apk/debug/app-debug.apk"
+          destination="android/app/build/outputs/apk/debug/TungKinh EV-${APK_VERSION}-debug.apk"
+          test -s "$source"
+          cp "$source" "$destination"
+          test -s "$destination"
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: TungKinh3-Debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: TungKinh-EV-${{ env.APK_VERSION }}-debug
+          path: android/app/build/outputs/apk/debug/TungKinh EV-${{ env.APK_VERSION }}-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Detect optional Release signing secrets
+        shell: bash
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.KEY_ALIAS }}
+          KP: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [[ -n "$KS" && -n "$KSP" && -n "$KA" && -n "$KP" ]]; then
+            echo 'BUILD_RELEASE=yes' >> "$GITHUB_ENV"
+            echo 'Fixed-key Release signing is configured.'
+          else
+            echo 'BUILD_RELEASE=no' >> "$GITHUB_ENV"
+            echo 'No complete signing secrets: Debug APK only.'
+          fi
+
+      - name: Configure signed Release build
+        if: env.BUILD_RELEASE == 'yes'
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/tungkinh-ev-release.jks
+          cat >> android/app/build.gradle <<'GRADLE'
+          android {
+              signingConfigs {
+                  tungKinhEvRelease {
+                      storeFile file("tungkinh-ev-release.jks")
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.tungKinhEvRelease
+                  }
+              }
+          }
+          GRADLE
+
+      - name: Build signed Release APK
+        if: env.BUILD_RELEASE == 'yes'
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Rename signed Release APK
+        if: env.BUILD_RELEASE == 'yes'
+        shell: bash
+        run: |
+          source="android/app/build/outputs/apk/release/app-release.apk"
+          destination="android/app/build/outputs/apk/release/TungKinh EV-${APK_VERSION}.apk"
+          test -s "$source"
+          cp "$source" "$destination"
+          test -s "$destination"
+
+      - name: Upload signed Release APK
+        if: env.BUILD_RELEASE == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TungKinh-EV-${{ env.APK_VERSION }}
+          path: android/app/build/outputs/apk/release/TungKinh EV-${{ env.APK_VERSION }}.apk
+          if-no-files-found: error
+          retention-days: 90

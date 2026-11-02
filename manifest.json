@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "tungkinh3 — Luyện nghe và đọc kinh",
-  "short_name": "tungkinh3",
+  "name": "TungKinh EV",
+  "short_name": "TungKinh EV",
   "description": "Luyện nghe kinh, luyện phát âm theo từng câu, ghi âm và so sánh giọng mẫu trên Android.",
   "start_url": "./index.html",
   "scope": "./",

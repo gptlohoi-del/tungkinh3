@@ -17,7 +17,7 @@ class IDs(HTMLParser):
         if 'id' in a: self.ids.add(a['id'])
 
 manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-assert manifest['short_name'] == 'tungkinh3'
+assert manifest['short_name'] == 'TungKinh EV'
 assert manifest['start_url'].startswith('./')
 assert all((root / x['src']).is_file() for x in manifest['icons'])
 config = json.loads((root / 'apphub.json').read_text(encoding='utf-8'))
